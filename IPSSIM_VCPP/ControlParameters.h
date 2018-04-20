@@ -436,8 +436,10 @@ public:
 	double getTYEAR();
 	double getDELT();
 	double getDELTM1();
-	void OUTLST3();
-	void OUTLST2();
+	void OUTLST3(int ML, int ISTOP, int IGOI, int IERRP, int ITRSP, double ERRP, int IERRU, int ITRSU, double ERRU);
+	void OUTLST2(int ML, int ISTOP, int IGOI, int IERRP, int ITRSP, double ERRP, int IERRU, int ITRSU, double ERRU);
+	void OUTNOD();
+	void OUTOBS();
 
 private:
 	int IQSOPT, IQSOUT, IPBCT, IUBCT,IBCT;

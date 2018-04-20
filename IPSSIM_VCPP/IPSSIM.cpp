@@ -283,7 +283,7 @@ void main(){
 		if (controlParameters->getKTYPE(0) == 3){
 		
 			//OUTLST3
-			// CALL OUTLST3(0,0,0,0,0,0D0,0,0,0D0,PVEC,UVEC,VMAG,VANG1,VANG2, SW, SWT, SWB)
+			controlParameters->OUTLST3(0, 0, 0, 0, 0, 0.0, 0, 0, 0.0);
 
 		}
 		else{
@@ -293,7 +293,16 @@ void main(){
 
 	}
 
+	// IF TRANSIENT FLOW, PRINT TO NODEWISE AND OBSERVATION OUTPUT
+	// FILES NOW.  (OTHERWISE, WAIT UNTIL STEADY - STATE FLOW SOLUTION IS COMPUTED.)
 
+	if (controlParameters->getISSFLO() == 0){
+		controlParameters->OUTNOD();
+		controlParameters->OUTOBS();
+	
+	}
+
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << " Total Passed time " << gent << " seconds" << endl;
 	writerThread.join();
 	int sleepTime = 45000; // in milli seconds

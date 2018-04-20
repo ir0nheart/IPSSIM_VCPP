@@ -3190,171 +3190,243 @@ END                                                                OUTLST3......
 
 */
 
-void ControlParameters::OUTLST3(){
+void ControlParameters::OUTLST3(int ML, int ISTOP,int IGOI, int IERRP,int ITRSP,double ERRP, int IERRU,int ITRSU,double ERRU ){
 	//args ML, ISTOP, IGOI, IERRP, ITRSP, ERRP, IERRU, ITRSU, ERRU, PVEC, UVEC, VMAG, VANG1, VANG2, SW, SWT, SWB
 	string logLine = "";
 	Writer * logWriter = Writer::Instance();
 	char buff[512];
 
 	ITREL = IT - ITRST;
-	if (ITREL > 0 || ISSFLO == 2 || ISSTRA == 1){
-		_snprintf(buff, sizeof(buff), "\n\n           RESULTS FOR TIME STEP %8d\n           _______ ___ ____ ____ ________\n", IT);
+
+	if (ITREL > 0 || ISSFLO == 2 || ISSTRA == 1)
+		goto HUNDRED;
+
+	logLine.append("\n\n\n\n" + string(11, ' ') + "I N I T I A L   C O N D I T I O N S\n" + string(11, ' ') + "___________________________________\n\n");
+	if (IREAD == -1){
+		logLine.append("\n\n" + string(11, ' ') + "INITIAL CONDITIONS RETRIEVED FROM A RESTART FILE(WARM START)\n");
+		_snprintf(buff, sizeof(buff), "           THAT WAS SAVED AT THE END OF TIME STEP %8d OF THE ORIGINAL SIMULATION", ITRST);
 		logLine.append(buff);
-		if (ITRMAX > 1){
-			if (IGOI == 0){
-				_snprintf(buff, sizeof(buff), "\n           NON-LINEARITY ITERATIONS CONVERGED AFTER %5d ITERATIONS\n", ITER);
-				logLine.append(buff);
-			}
-			else{
-				_snprintf(buff, sizeof(buff), "\n           NON-LINEARITY ITERATIONS N O T CONVERGED AFTER %5d ITERATIONS\n", ITER);
-				logLine.append(buff);
-			}
-			_snprintf(buff, sizeof(buff), "\n           MAXIMUM P CHANGE FROM PREVIOUS ITERATION %+14.5e AT NODE %9d\n", RPM, IPWORS);
-			logLine.append(buff);
-			_snprintf(buff, sizeof(buff), "           MAXIMUM U CHANGE FROM PREVIOUS ITERATION %+14.5e AT NODE %9d\n", RUM, IUWORS);
-			logLine.append(buff);
-
-			if (ML == 0 || ML == 1){
-				if (KSOLVP == 0){
-					logLine.append("\n" + string(11, ' ') + "P-SOLUTION COMPUTED USING DIRECT SOLVER");
-				}
-				else if (IERRP == 0){
-					_snprintf(buff, sizeof(buff), "           P-SOLUTION CONVERGED AFTER %5d MATRIX SOLVER ITERATIONS; ESTIMATED ERROR %+14.5e\n", ITRSP, ERRP);
-					logLine.append(buff);
-				}
-				else
-				{
-					_snprintf(buff, sizeof(buff), "           P-SOLUTION F A I L E D AFTER %5d MATRIX SOLVER ITERATIONS; ESTIMATED ERROR %+14.5e\n", ITRSP, ERRP);
-					logLine.append(buff);
-				}
-			}
-			if (ML == 0 || ML == 2){
-				if (ML == 2){ logLine.append("\n"); }
-				if (KSOLVU == 0){
-					logLine.append("\n" + string(11, ' ') + "U-SOLUTION COMPUTED USING DIRECT SOLVER");
-				}
-				else if (IERRU == 0){
-					_snprintf(buff, sizeof(buff), "           U-SOLUTION CONVERGED AFTER %5d MATRIX SOLVER ITERATIONS; ESTIMATED ERROR %+14.5e\n", ITRSU, ERRU);
-					logLine.append(buff);
-				}
-				else{
-					_snprintf(buff, sizeof(buff), "           U-SOLUTION F A I L E D AFTER %5d MATRIX SOLVER ITERATIONS; ESTIMATED ERROR %+14.5e\n", ITRSU, ERRU);
-					logLine.append(buff);
-				}
-			}
-		}
-		logWriter->writeContainer.push_back(logLine);
-		logLine.clear();
 	}
-	else{
-		logLine.append("\n\n\n\n" + string(11, ' ') + "I N I T I A L   C O N D I T I O N S\n" + string(11, ' ') + "___________________________________\n\n");
-		if (IREAD == -1){
-			logLine.append("\n\n" + string(11, ' ') + "INITIAL CONDITIONS RETRIEVED FROM A RESTART FILE(WARM START)\n");
-			_snprintf(buff, sizeof(buff), "           THAT WAS SAVED AT THE END OF TIME STEP %8d OF THE ORIGINAL SIMULATION",ITRST);
+	goto FIVEHUNDRED;
+
+
+HUNDRED:
+	_snprintf(buff, sizeof(buff), "\n\n           RESULTS FOR TIME STEP %8d\n           _______ ___ ____ ____ ________\n", IT);
+	logLine.append(buff);
+
+	if (ITRMAX > 1){
+		if (IGOI == 0){
+			_snprintf(buff, sizeof(buff), "\n           NON-LINEARITY ITERATIONS CONVERGED AFTER %5d ITERATIONS\n", ITER);
+			logLine.append(buff);
+		}
+		else{
+			_snprintf(buff, sizeof(buff), "\n           NON-LINEARITY ITERATIONS N O T CONVERGED AFTER %5d ITERATIONS\n", ITER);
+			logLine.append(buff);
+		}
+		_snprintf(buff, sizeof(buff), "\n           MAXIMUM P CHANGE FROM PREVIOUS ITERATION %+14.5e AT NODE %9d\n", RPM, IPWORS);
+		logLine.append(buff);
+		_snprintf(buff, sizeof(buff), "           MAXIMUM U CHANGE FROM PREVIOUS ITERATION %+14.5e AT NODE %9d\n", RUM, IUWORS);
+		logLine.append(buff);
+	}
+
+	if (ML == 0 || ML == 1){
+		if (KSOLVP == 0){
+			logLine.append("\n" + string(11, ' ') + "P-SOLUTION COMPUTED USING DIRECT SOLVER");
+		}
+		else if (IERRP == 0){
+			_snprintf(buff, sizeof(buff), "           P-SOLUTION CONVERGED AFTER %5d MATRIX SOLVER ITERATIONS; ESTIMATED ERROR %+14.5e\n", ITRSP, ERRP);
+			logLine.append(buff);
+		}
+		else
+		{
+			_snprintf(buff, sizeof(buff), "           P-SOLUTION F A I L E D AFTER %5d MATRIX SOLVER ITERATIONS; ESTIMATED ERROR %+14.5e\n", ITRSP, ERRP);
+			logLine.append(buff);
+		}
+	}
+	if (ML == 0 || ML == 2){
+		if (ML == 2){ logLine.append("\n"); }
+		if (KSOLVU == 0){
+			logLine.append("\n" + string(11, ' ') + "U-SOLUTION COMPUTED USING DIRECT SOLVER");
+		}
+		else if (IERRU == 0){
+			_snprintf(buff, sizeof(buff), "           U-SOLUTION CONVERGED AFTER %5d MATRIX SOLVER ITERATIONS; ESTIMATED ERROR %+14.5e\n", ITRSU, ERRU);
+			logLine.append(buff);
+		}
+		else{
+			_snprintf(buff, sizeof(buff), "           U-SOLUTION F A I L E D AFTER %5d MATRIX SOLVER ITERATIONS; ESTIMATED ERROR %+14.5e\n", ITRSU, ERRU);
 			logLine.append(buff);
 		}
 	}
 
-	if (IT == 0 && ISSFLO == 2){
-		if (KPANDS == 1){
-			if (KPANDS == 1){
-				logLine.append("\n\n\n" + string(11, ' ') + "S T E A D Y  -  S T A T E   P R E S S U R E\n\n");
-				_snprintf(buff, sizeof(buff), "      NODE                      NODE                      NODE                      NODE                      NODE                \n");
-				logLine.append(buff);
-				for (int i = 0; i < NN; i++){
-					_snprintf(buff, sizeof(buff), "     %9d %+15.8e", nodeContainer[i]->getNodeNumber(), nodeContainer[i]->getPVEC());
-					logLine.append(buff);
-					if (i + 1 % 5 == 0)
-						logLine.append("\n");
-				}
-				return;
-			}
-			logLine.append("\n\n\n" + string(11, ' ') + "S A T U R A T I O N \n\n");
-			_snprintf(buff, sizeof(buff), "      NODE                      NODE                      NODE                      NODE                      NODE                \n");
-			logLine.append(buff);
-			for (int i = 0; i < NN; i++){
-				_snprintf(buff, sizeof(buff), "     %9d %+15.8e", nodeContainer[i]->getNodeNumber(), nodeContainer[i]->getSWT());
-				logLine.append(buff);
-				if (i + 1 % 5 == 0)
-					logLine.append("\n");
-			}
-		}
-	}
 
 
-	if (ISSTRA == 1){
-		//OUTPUT PRESSURES FOR STEADY STATE SOLUTION
-		if (KPANDS == 1){
-			logLine.append("\n\n\n" + string(11, ' ') + "S T E A D Y  -  S T A T E   P R E S S U R E\n\n");
-			_snprintf(buff, sizeof(buff), "      NODE                      NODE                      NODE                      NODE                      NODE                \n");
-			logLine.append(buff);
-			for (int i = 0; i < NN; i++){
-				_snprintf(buff, sizeof(buff), "     %9d %+15.8e", nodeContainer[i]->getNodeNumber(), nodeContainer[i]->getPVEC());
-				logLine.append(buff);
-				if (i + 1 % 5 == 0)
-					logLine.append("\n");
-			}
-			return;
-		}
-		// OUTPUT CONCENTRATIONS FOR STEADY STATE TRANSPORT 
-		if (KCORT == 1){
-			logLine.append("\n\n\n" + string(11, ' ') + "S T E A D Y  -  S T A T E   C O N C E N T R A T I O N \n\n");
-			_snprintf(buff, sizeof(buff), "      NODE                      NODE                      NODE                      NODE                      NODE                \n\n");
-			logLine.append(buff);
-			for (int i = 0; i < NN; i++){
-				_snprintf(buff, sizeof(buff), " %9d %+15.8e", nodeContainer[i]->getNodeNumber(), nodeContainer[i]->getUVEC());
-				logLine.append(buff);
-				if (i + 1 % 5 == 0)
-					logLine.append("\n");
-			}
-			if (ISSFLO != 2 || IT != 1 || KVEL != 1){
-				return; // get out;
-			}
-			// OUTPUT VELOCITIES FOR STEADY STATE FLOW SOLUTION
-			logLine.append("\n\n\n" + string(11, ' ') + "S T E A D Y  -  S T A T E   F L U I D   V E L O C I T Y\n\n");
-			logLine.append(string(11, ' ') + " M A G N I T U D E   A T   C E N T R O I D   O F   E L E M E N T\n\n");
-			_snprintf(buff, sizeof(buff), "   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                ");
-				logLine.append(buff);
-			for (int i = 0; i < NE; i++){
-				_snprintf(buff, sizeof(buff), " %9d %+15.8e", elementContainer[i]->getElementNumber(), elementContainer[i] ->getVMAG());
-				logLine.append(buff);
-				if (i + 1 % 5 == 0)
-					logLine.append("\n");
-			}
-
-			logLine.append("\n\n\n" + string(11, ' ') + "S T E A D Y  -  S T A T E   F L U I D   V E L O C I T Y\n\n");
-			logLine.append(string(11, ' ') + "A N G L E 1   AT CENTROID OF ELEMENT, IN DEGREES FROM +X-AXIS TO PROJECTION OF FLOW DIRECTION IN XY-PLANE\n\n");
-			_snprintf(buff, sizeof(buff), "   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                ");
-			logLine.append(buff);
-			for (int i = 0; i < NE; i++){
-				_snprintf(buff, sizeof(buff), " %9d %+15.8e", elementContainer[i]->getElementNumber(), elementContainer[i]->getVANG1());
-				logLine.append(buff);
-				if (i + 1 % 5 == 0)
-					logLine.append("\n");
-			}
-
-			logLine.append("\n\n\n" + string(11, ' ') + "S T E A D Y  -  S T A T E   F L U I D   V E L O C I T Y\n\n");
-			logLine.append(string(11, ' ') + "A N G L E 2   AT CENTROID OF ELEMENT, IN DEGREES FROM XY-PLANE TO FLOW DIRECTION\n\n");
-			_snprintf(buff, sizeof(buff), "   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                ");
-			logLine.append(buff);
-			for (int i = 0; i < NE; i++){
-				_snprintf(buff, sizeof(buff), " %9d %+15.8e", elementContainer[i]->getElementNumber(), elementContainer[i]->getVANG2());
-				logLine.append(buff);
-				if (i + 1 % 5 == 0)
-					logLine.append("\n");
-			}
-				
-		}		
-			
-	}
+FIVEHUNDRED:
+	if (IT == 0 && ISSFLO == 2)
+		goto SIXHUNDRED;
+	if (ISSTRA == 1)
+		goto EIGHTHUNDRED;
 
 	_snprintf(buff, sizeof(buff), "\n\n\n           TIME INCREMENT : %+15.4e SECONDS\n\n           TIME AT END   %+15.4e SECONDS\n", DELT, TSEC);
 	logLine.append(buff);
-	_snprintf(buff, sizeof(buff), "           OF STEP:      %15.4e MINUTES %+15.4e HOURS %+15.4e DAYS %+15.4e WEEKS %+15.4e YEARS\n", TMIN, THOUR, TDAY, TWEEK, TMONTH,TYEAR);
+	_snprintf(buff, sizeof(buff), "           OF STEP:      %+15.4e MINUTES\n                         %+15.4e HOURS\n                         %+15.4e DAYS\n                         %+15.4e WEEKS\n                         %+15.4e YEARS\n", TMIN, THOUR, TDAY, TWEEK, TMONTH, TYEAR);
 	logLine.append(buff);
-	//line 500
-	/*
+ 
+	if (ML == 2 && ISTOP >= 0)
+		goto SEVENHUNDRED;
+	if (ISSFLO > 0)
+		goto SEVENHUNDRED;
 
-	
+	if (KPANDS == 1){
+		logLine.append("\n\n\n" + string(11, ' ') + "P R E S S U R E \n\n");
+		_snprintf(buff, sizeof(buff), "      NODE                       NODE                       NODE                       NODE                        NODE                \n\n");
+		logLine.append(buff);
+		for (int i = 1; i <= NN; i++){
+			_snprintf(buff, sizeof(buff), " %9d %+15.8e", nodeContainer[i]->getNodeNumber(), nodeContainer[i]->getPVEC());
+			logLine.append(buff);
+			if (i% 5 == 0)
+				logLine.append("\n");
+		}
+
+		logLine.append("\n\n\n" + string(11, ' ') + "S A T U R A T I O N \n\n");
+		_snprintf(buff, sizeof(buff), "      NODE                       NODE                       NODE                       NODE                        NODE                \n\n");
+		logLine.append(buff);
+		for (int i = 1; i <= NN; i++){
+			_snprintf(buff, sizeof(buff), " %9d %+15.8e", nodeContainer[i]->getNodeNumber(), nodeContainer[i]->getSWT());
+			logLine.append(buff);
+			if (i% 5 == 0)
+				logLine.append("\n");
+		}
+	}
+
+	if (KVEL == 1 && ITREL > 0){
+		logLine.append("\n\n\n" + string(11, ' ') + "F L U I D   V E L O C I T Y\n\n");
+		logLine.append(string(11, ' ') + " M A G N I T U D E   A T   C E N T R O I D   O F   E L E M E N T\n\n");
+		_snprintf(buff, sizeof(buff), "   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                \n\n");
+		logLine.append(buff);
+		for (int i = 1; i <= NE; i++){
+			_snprintf(buff, sizeof(buff), " %9d %+15.8e", elementContainer[i]->getElementNumber(), elementContainer[i]->getVMAG());
+			logLine.append(buff);
+			if (i% 5 == 0)
+				logLine.append("\n");
+		}
+
+		logLine.append("\n\n\n" + string(11, ' ') + "F L U I D   V E L O C I T Y\n\n");
+		logLine.append(string(11, ' ') + "A N G L E 1   AT CENTROID OF ELEMENT, IN DEGREES FROM +X-AXIS TO PROJECTION OF FLOW DIRECTION IN XY-PLANE\n\n");
+		_snprintf(buff, sizeof(buff), "   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                \n\n");
+		logLine.append(buff);
+		for (int i = 1; i <= NE; i++){
+			_snprintf(buff, sizeof(buff), " %9d %+15.8e", elementContainer[i]->getElementNumber(), elementContainer[i]->getVANG1());
+			logLine.append(buff);
+			if (i% 5 == 0)
+				logLine.append("\n");
+		}
+
+		logLine.append("\n\n\n" + string(11, ' ') + "F L U I D   V E L O C I T Y\n\n");
+		logLine.append(string(11, ' ') + "A N G L E 2   AT CENTROID OF ELEMENT, IN DEGREES FROM XY-PLANE TO FLOW DIRECTION\n\n");
+		_snprintf(buff, sizeof(buff), "   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                \n\n");
+		logLine.append(buff);
+		for (int i = 1; i <= NE; i++){
+			_snprintf(buff, sizeof(buff), " %9d %+15.8e", elementContainer[i]->getElementNumber(), elementContainer[i]->getVANG2());
+			logLine.append(buff);
+			if (i% 5 == 0)
+				logLine.append("\n");
+		}
+	}
+	goto SEVENHUNDRED;
+
+SIXHUNDRED:
+	if (KPANDS == 1){
+		logLine.append("\n\n\n" + string(11, ' ') + "S T E A D Y  -  S T A T E   P R E S S U R E\n\n");
+		_snprintf(buff, sizeof(buff), "      NODE                       NODE                       NODE                       NODE                        NODE                 \n\n");
+		logLine.append(buff);
+		for (int i = 1; i <= NN; i++){
+			_snprintf(buff, sizeof(buff), " %9d %+15.8e", nodeContainer[i]->getNodeNumber(), nodeContainer[i]->getPVEC());
+			logLine.append(buff);
+			if (i% 5 == 0)
+				logLine.append("\n");
+		}
+	}
+	goto THOUSAND;
+
+
+SEVENHUNDRED:
+	if (ML == 1 && ISTOP >= 0)
+		goto THOUSAND;
+
+	if (KCORT == 1){
+		logLine.append("\n\n\n" + string(11, ' ') + "C O N C E N T R A T I O N \n\n");
+		_snprintf(buff, sizeof(buff), "      NODE                       NODE                       NODE                       NODE                        NODE                 \n\n");
+		logLine.append(buff);
+		for (int i = 1; i <= NN; i++){
+			_snprintf(buff, sizeof(buff), " %9d %+15.8e", nodeContainer[i]->getNodeNumber(), nodeContainer[i]->getUVEC());
+			logLine.append(buff);
+			if (i% 5 == 0)
+				logLine.append("\n");
+		}
+		goto NINEHUNDRED;
+	}
+
+
+EIGHTHUNDRED :
+	if (KCORT == 1){
+		logLine.append("\n\n\n" + string(11, ' ') + "S T E A D Y  -  S T A T E   C O N C E N T R A T I O N \n\n");
+		_snprintf(buff, sizeof(buff), "      NODE                       NODE                       NODE                       NODE                        NODE                 \n\n");
+		logLine.append(buff);
+		for (int i = 1; i <= NN; i++){
+			_snprintf(buff, sizeof(buff), " %9d %+15.8e", nodeContainer[i]->getNodeNumber(), nodeContainer[i]->getUVEC());
+			logLine.append(buff);
+			if (i% 5 == 0)
+				logLine.append("\n");
+		}
+	}
+NINEHUNDRED:
+	if (ISSFLO != 2 || IT != 1 || KVEL != 1)
+		goto THOUSAND;
+
+	logLine.append("\n\n\n" + string(11, ' ') + "S T E A D Y  -  S T A T E   F L U I D   V E L O C I T Y\n\n");
+	logLine.append(string(11, ' ') + " M A G N I T U D E   A T   C E N T R O I D   O F   E L E M E N T\n\n");
+	_snprintf(buff, sizeof(buff), "   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                \n\n");
+	logLine.append(buff);
+	for (int i = 1; i <= NE; i++){
+		_snprintf(buff, sizeof(buff), " %9d %+15.8e", elementContainer[i]->getElementNumber(), elementContainer[i]->getVMAG());
+		logLine.append(buff);
+		if (i% 5 == 0)
+			logLine.append("\n");
+	}
+
+	logLine.append("\n\n\n" + string(11, ' ') + "S T E A D Y  -  S T A T E   F L U I D   V E L O C I T Y\n\n");
+	logLine.append(string(11, ' ') + "A N G L E 1   AT CENTROID OF ELEMENT, IN DEGREES FROM +X-AXIS TO PROJECTION OF FLOW DIRECTION IN XY-PLANE\n\n");
+	_snprintf(buff, sizeof(buff), "   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                \n\n");
+	logLine.append(buff);
+	for (int i = 1; i <= NE; i++){
+		_snprintf(buff, sizeof(buff), " %9d %+15.8e", elementContainer[i]->getElementNumber(), elementContainer[i]->getVANG1());
+		logLine.append(buff);
+		if (i% 5 == 0)
+			logLine.append("\n");
+	}
+
+	logLine.append("\n\n\n" + string(11, ' ') + "S T E A D Y  -  S T A T E   F L U I D   V E L O C I T Y\n\n");
+	logLine.append(string(11, ' ') + "A N G L E 2   AT CENTROID OF ELEMENT, IN DEGREES FROM XY-PLANE TO FLOW DIRECTION\n\n");
+	_snprintf(buff, sizeof(buff), "   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                   ELEMENT                \n\n");
+	logLine.append(buff);
+	for (int i = 1; i <= NE; i++){
+		_snprintf(buff, sizeof(buff), " %9d %+15.8e", elementContainer[i]->getElementNumber(), elementContainer[i]->getVANG2());
+		logLine.append(buff);
+		if (i % 5 == 0)
+			logLine.append("\n");
+	}
+
+
+
+THOUSAND:
+	logWriter->writeContainer.push_back(logLine);
+	logLine.clear();
+}
+
+void ControlParameters::OUTNOD(){
+
+}
+
+void ControlParameters::OUTOBS(){
 
 }
