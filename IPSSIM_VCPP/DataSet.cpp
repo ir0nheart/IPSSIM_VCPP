@@ -258,10 +258,11 @@ void DataSet::parseDataSet_2B(){
 			CP->setNN2(stoi(dataPos.at(4)));
 			CP->setNN3(stoi(dataPos.at(5)));
 		}
+		CP->setKTYPE(1, 2);
 
 		if (CP->getNN1() < 2 || CP->getNN2() < 2 || (CP->getKTYPE(0) == 3 && CP->getNN3() < 2)){
 			CP->exitOnError("INP-2B-3");
-			CP->setKTYPE(1,2);
+			
 		}
 
 	}
@@ -429,7 +430,7 @@ void DataSet::parseDataSet_5(){
 }
 void DataSet::parseDataSet_6(){
 	// ! Here Reads ICS file if Cold Start or WARM
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	string logLine = "";
 	logLine.append(string(11, ' ') + "T E M P O R A L   C O N T R O L   A N D   S O L U T I O N   C Y C L I N G   D A T A\n\n");
 
@@ -918,7 +919,7 @@ void DataSet::parseDataSet_6(){
 }
 void DataSet::parseDataSet_7A(){
 	ControlParameters * CP = ControlParameters::Instance();
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	string logLine = "";
 	pair<int, int> dataSetPosition = InputFileParser::Instance()->getDataSets()[7];
 	int size = dataSetPosition.second - dataSetPosition.first;
@@ -990,7 +991,7 @@ void DataSet::parseDataSet_7B(){
 
 }
 void DataSet::parseDataSet_7C(){
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	string logLine = "";
 	ControlParameters * CP = ControlParameters::Instance();
 	vector<string> dataPos;
@@ -1100,7 +1101,7 @@ void DataSet::parseDataSet_7C(){
 
 }
 void DataSet::parseDataSet_8ABC(){
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	string logLine = "";
 	ControlParameters * CP = ControlParameters::Instance();
 	vector<string> dataPos;
@@ -1281,6 +1282,8 @@ void DataSet::parseDataSet_8ABC(){
 		
 
 	}
+
+
 	line = lines[2];
 	dataPos.clear();
 	boost::split(dataPos, line, boost::is_any_of(" ,\r"), boost::token_compress_on);
@@ -1302,7 +1305,7 @@ void DataSet::parseDataSet_8ABC(){
 }
 void DataSet::parseDataSet_8D(){
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 
 	ControlParameters * CP = ControlParameters::Instance();
@@ -1386,7 +1389,7 @@ void DataSet::parseDataSet_8D(){
 }
 void DataSet::parseDataSet_8E_9_10_11(){
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 	ControlParameters * CP = ControlParameters::Instance();
 
@@ -1535,7 +1538,7 @@ void DataSet::parseDataSet_8E_9_10_11(){
 void DataSet::parseDataSet_12_13_14A(){
 
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 
 
@@ -1661,7 +1664,7 @@ void DataSet::parseDataSet_12_13_14A(){
 void DataSet::parseDataSet_14B(){
 	ControlParameters * CP = ControlParameters::Instance();
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 	if (CP->getKTYPE(0) == 3){
 		const char * del = " ";
@@ -1773,7 +1776,7 @@ void DataSet::parseDataSet_14B(){
 }
 void DataSet::parseDataSet_15A(){
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 	ControlParameters * CP = ControlParameters::Instance();
 

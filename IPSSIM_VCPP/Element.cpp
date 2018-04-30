@@ -147,6 +147,9 @@ Element & Element::operator = (Element && other){
 	return *this;
 }
 
+int * Element::getElementNodes(){ 
+	return this->elementNodes; 
+}
 void Element::print_Info(){
 	cout << setfill('#') << setw(80) <<""<< endl;
 	cout << setfill('*') << setw(60);

@@ -16,7 +16,7 @@ void Miscellaneous::spacer(){
 
 void Miscellaneous::banner(){
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	for (int i = 0; i < 133; i++){
 		logLine.append("*");
 	}

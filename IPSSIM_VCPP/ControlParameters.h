@@ -5,6 +5,8 @@
 #include <string>
 #include <Windows.h>
 #include <algorithm>
+#include <iterator>
+#include <functional>
 #include <time.h>
 #include <chrono>
 #include <thread>
@@ -25,6 +27,7 @@
 #include "Timer.h"
 #include "DataSet.h"
 #include "Writer.h"
+#include <map>
 using namespace std;
 #pragma once
 class InputFiles;
@@ -75,6 +78,9 @@ public:
 	void createDataSets();
 	const static string SOLNAM[];
 	const static string SOLWRD[];
+	const static string types[];
+	const static string Headers[];
+	map<std::string, std::string>nodeHeaders;
 	void setKSOLVP(int val);
 	void setKSOLVU(int val);
 	int getKSOLVP();
@@ -99,6 +105,9 @@ public:
 	const string VERN = "2.2";
 	void exitOnError(string ERRCOD, vector<string>CHERR = vector<string>());
 	void writeToLSTString(string str);
+	void writeToNODString(string str);
+	void writeToELEString(string str);
+	void writeToOBSString(string str);
 	void popWriteContainer();
 	void setTITLE1(string str);
 	void setTITLE2(string str);
@@ -109,8 +118,11 @@ public:
 	void setTEMP(double TEMP);
 	void setSMWH(double SMWH);
 	void setTimeStepDivide(int tsd);
+	void setWaterTable(double val);
 	void setTSTART(double val);
 	void setITMAX(int val);
+	void setIT(int val);
+	int getIT();
 	int getITMAX();
 	double getTSTART();
 	double getTFINISH();
@@ -124,6 +136,7 @@ public:
 	void Bound(string key);
 	int getTimeStepDivide();
 	int getNumberOfLayers();
+	double getWaterTable();
 	void setNumberOfLayers(int nnLayers);
 	void addToListOfSchedules(Schedule * sch);
 	vector<Schedule *> getListOfSchedules();
@@ -440,12 +453,48 @@ public:
 	void OUTLST2(int ML, int ISTOP, int IGOI, int IERRP, int ITRSP, double ERRP, int IERRU, int ITRSU, double ERRU);
 	void OUTNOD();
 	void OUTOBS();
+	bool getOnceNOD();
+	void setOnceNOD(bool val);
+	bool getOnceOBS();
+	void setOnceOBS(bool val);
+	void setTIME(double val);
+	double getTIME();
+
+	void setML(int val);
+	int getML();
+	double getDLTPM1();
+	double getDLTUM1();
+	double getBDELP1();
+	double getBDELP();
+	double getBDELU();
+	void setDLTPM1(double val);
+	void setDLTUM1(double val);
+	void setBDELP1(double val);
+	void setBDELP(double val);
+	void setBDELU(double val);
+	void setNOUMAT(int val);
+	int getNOUMAT();
+	void setITER(int val);
+	int getITER();
+	void setDELTU(double val);
+	void setDELTP(double val);
+	double getDELTU();
+	double getDELTP();
+
+	void PU(ObservationPoints *p );
+	void PUP(ObservationPoints *p);
+	void PUSWF(ObservationPoints * p,double SFRAC);
 
 private:
+	int NOUMAT;
+	int ITOUT;
+	double DURN, TOUT;
+	bool onceNOD = false;
+	bool onceOBS = false;
 	int IQSOPT, IQSOUT, IPBCT, IUBCT,IBCT;
 	int NBCFPR, NBCSPR, NBCPPR, NBCUPR;
 	int KINACT;
-	double TMAX,TEMAX,TSEC,TSECP0,TSECU0,TSECM1,TMIN,THOUR,TMONTH,TDAY,TWEEK,TYEAR,DELT,DELTM1;
+	double TMAX,TEMAX,TSEC,TSECP0,TSECU0,TSECM1,TMIN,THOUR,TMONTH,TDAY,TWEEK,TYEAR,DELT,DELTM1,DELTU,DELTP;
 	double SCALX, SCALY, SCALZ, PORFAC;
 	double PMAXFA, PMIDFA, PMINFA, ANG1FA, ANG2FA, ANG3FA, ALMAXF, ALMIDF, ALMINF, ATMXF, ATMDF, ATMNF,ANGFAC;
 	int NBCN, NOBSN, N48, NEX, NIN, NNNX, NDIMJA, NNVEC;
@@ -467,6 +516,7 @@ private:
 	double GCONST;
 	double SMWH;
 	int timeStepDivide;
+	double waterTable;
 
 	vector<Layer *> layers;
 	unordered_map <string, DataSet *> dataSetMap;
@@ -612,6 +662,7 @@ private:
 	double TIMEI = 0; // initial time for a time cycle
 	double TIMEL = 0; // limiting time for a time cycle
 	double TIMEC = 0; // initial time increment for a time cycle
+	double TIME = 0;
 	int NTCYC; // number of cycle after which the time increment is updated
 	double TCMULT; // multiplier for time increment
 	double TCMIN; // minimum time increment allowed
@@ -688,6 +739,8 @@ private:
 	int LEM;
 	deque<string>writeContainer;
 	bool isNewRun;
+	bool isNewNod;
+	bool isNewObs;
 	double TSTART;
 	double TFINISH;
 	list<pair<double,double>>timeSteps;
@@ -698,5 +751,12 @@ private:
 	int NRTEST,LRTEST;
 	int IT, ITRST, ITREL,ITER,IPWORS,IUWORS;
 	double RPM, RUM;
+	int KTPRN;
+	bool * BCSFL;
+	bool * BCSTR;
+	int ML;
+	double DLTPM1, DLTUM1, BDELP1, BDELP, BDELU;
+
+
 };
 #endif

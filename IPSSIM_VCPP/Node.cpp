@@ -57,6 +57,19 @@ void Node::setQUIN(double QUIN){ this->QUIN = QUIN; }
 void Node::setPVEC(double PVEC){ this->PVEC = PVEC; }
 void Node::setUVEC(double UVEC){ this->UVEC = UVEC; }
 void Node::setSWT(double SWT){ this->SWT = SWT; }
+void Node::setSTRRAT(double STRRAT){ this->STRRAT = STRRAT; }
+void Node::setEFFSTR(double EFFSTR){ this->EFFSTR = EFFSTR; }
+void Node::setEFFSTRI(double EFFSTR){ this->EFFSTRI = EFFSTR; }
+void Node::setTOTSTR(double val){ this->TOTSTR = val; }
+void Node::setPOREP(double val){ this->POREP = val; }
+void Node::setLayer(Layer * lay, int layN){
+	this->layer = lay;
+	this->layerN = layN;
+}
+void Node::setCNUB(double val){ this->CNUB = val; }
+void Node::setPM(double val){ this->PM = val; }
+void Node::setUM(double val){ this->UM = val; }
+void Node::setCNUBM(double val){ this->CNUBM = val; }
 // Getters
 int Node::getNodeNumber(){ return this->NodeNumber; }
 int Node::getNREG(){ return this->NREG;}
@@ -73,3 +86,14 @@ double Node::getQUIN(){ return this->QUIN; }
 double Node::getPVEC(){ return this->PVEC; }
 double Node::getUVEC(){ return this->UVEC; }
 double Node::getSWT(){ return this->SWT; }
+double Node::getSTRRAT(){ return this->STRRAT; }
+double Node::getEFFSTR(){ return this->EFFSTR; }
+double Node::getEFFSTRI(){ return this->EFFSTRI; }
+Layer * Node::getLayer(){ return this->layer; }
+int Node::getLayerN(){ return this->layerN; }
+double Node::getPOREP(){ return this->POREP; }
+double Node::getTOTSTR(){ return this->TOTSTR; }
+double Node::getCNUB(){ return this->CNUB; }
+double Node::getPM(){ return this->PM; }
+double Node::getUM(){ return this->UM; }
+double Node::getCNUBM(){ return this->CNUBM; }

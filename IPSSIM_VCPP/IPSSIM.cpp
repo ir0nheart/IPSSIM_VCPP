@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <Windows.h>
+#include <thread>
 #include <string>
 #include "ControlParameters.h"
 #include "InputFiles.h"
@@ -15,7 +16,7 @@
 #include "Thread.h"
 #include "Writer.h"
 #include <mutex>
-
+#include <chrono>
 
 
 
@@ -23,25 +24,44 @@ mutex writeMutex;
 
 
 using namespace std;
+
 class Node;
+
 
 
 class IPSSIM  {
 public:
-	IPSSIM(int ID) : myID(ID) {}
+	IPSSIM(int ID) : myID(ID){} // 1 = LST , 2 = NOD , 3 ELE , 4 OBS;
 	virtual void  run() {
 		string str = "";
 		ControlParameters * CP = ControlParameters::Instance();
-		Writer * wr = Writer::Instance();
+		switch (myID){
+		case 1: wr = Writer::LSTInstance();  break;
+		case 2: wr = Writer::NODInstance();  break;
+		case 3: wr = Writer::ELEInstance();  break;
+		case 4: wr = Writer::OBSInstance();  break;
+
+		}
+
 		RECHECK:
 		if (wr->writeContainer.size() != 0){
 				str = wr->writeContainer[0];
 				writeMutex.lock();
-				CP->writeToLSTString(str);
 				wr->writeContainer.pop_front();
-				writeMutex.unlock();			
+				writeMutex.unlock();
+
+				if (myID == 1)
+				CP->writeToLSTString(str);
+				if (myID == 2)
+				CP->writeToNODString(str);
+				if (myID == 3)
+					CP->writeToELEString(str);
+				if (myID == 4)
+					CP->writeToOBSString(str);
+
+						
 		}
-		
+		this_thread::sleep_for(chrono::seconds(1));
 			goto RECHECK;
 		
 		
@@ -49,9 +69,39 @@ public:
 	}
 private:
 	int myID;
+	Writer * wr;
+
+
+};
+/*
+public:
+IPSSIM(int ID) : myID(ID) {}
+virtual void  run() {
+string str = "";
+ControlParameters * CP = ControlParameters::Instance();
+Writer * wr = Writer::Instance();
+RECHECK:
+if (wr->writeContainer.size() != 0){
+str = wr->writeContainer[0];
+writeMutex.lock();
+CP->writeToLSTString(str);
+wr->writeContainer.pop_front();
+writeMutex.unlock();
+}
+
+goto RECHECK;
+
+
+//return reinterpret_cast<void*>(myID);
+}
+private:
+int myID;
+void *pfi(string str);
+
 
 };
 
+*/
 
 // Windows console has a standard length of 80 characters for each line.
 
@@ -79,7 +129,7 @@ enum Colors{
 };
 
 void main(){
-	Writer * logWriter = Writer::Instance(); // Create Writer Class for Logging LST file
+	Writer * logWriter = Writer::LSTInstance(); // Create Writer Class for Logging LST file
 	
 	// Create Two Timers : Used in Debugging. Timer t -> for elapsed time in a function, Timer gent -> Timer for total elapsed time
 	Timer t,gent;
@@ -108,7 +158,12 @@ void main(){
 	cout << "IPSSIM will check if input files exists." << endl;
 
 	inputFiles->checkInputFiles();
-	thread writerThread = thread(&IPSSIM::run, new IPSSIM(1));
+
+
+	thread lstWriterThread = thread(&IPSSIM::run, new IPSSIM(1));
+	thread nodWriterThread = thread(&IPSSIM::run, new IPSSIM(2));
+	thread eleWriterThread = thread(&IPSSIM::run, new IPSSIM(3));
+	thread obsWriterThread = thread(&IPSSIM::run, new IPSSIM(4));
 
 	Miscellaneous::spacer();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
@@ -290,21 +345,60 @@ void main(){
 			//OUTLST2
 		}
 
-
-	}
-
 	// IF TRANSIENT FLOW, PRINT TO NODEWISE AND OBSERVATION OUTPUT
 	// FILES NOW.  (OTHERWISE, WAIT UNTIL STEADY - STATE FLOW SOLUTION IS COMPUTED.)
 
-	if (controlParameters->getISSFLO() == 0){
+		if (controlParameters->getISSFLO() == 0){
 		controlParameters->OUTNOD();
-		controlParameters->OUTOBS();
-	
+		controlParameters->setTIME(controlParameters->getTSEC());
+		controlParameters->OUTOBS(); /// ADD CODE FOR HERE
+		}
 	}
+
+	char buff[512];
+	// SET SWITCHES AND PARAMETERS FOR SOLUTION WITH STEADY-STATE FLOW 
+	if (controlParameters->getISSFLO() != 1){
+		goto BEGINTIMESTEP;
+	}
+	
+	controlParameters->setML(1.0);
+	controlParameters->setNOUMAT(0);
+	controlParameters->setISSFLO(2);
+	controlParameters->setITER(0);
+	controlParameters->setDLTPM1(controlParameters->getDELTP());
+	controlParameters->setDLTUM1(controlParameters->getDELTU());
+	controlParameters->setBDELP1(1.0);
+	controlParameters->setBDELP(0);
+	controlParameters->setBDELU(0);
+
+
+
+	if (controlParameters->getISSTRA() != 0){
+		_snprintf(buff, sizeof(buff), " TIME STEP %8d OF %8d ", controlParameters->getIT(), controlParameters->getITMAX());
+		cout << buff << endl;
+	}
+	else{
+		_snprintf(buff, sizeof(buff), " TIME STEP %8d OF %8d ;    ELAPSED TIME: %+11.4E OF %11.4E [s]", controlParameters->getIT(), controlParameters->getITMAX(), controlParameters->getTSEC(), controlParameters->getTEMAX());
+		cout << buff << endl;
+	}
+	goto BEGINITERATION;
+
+	
+
+BEGINTIMESTEP:
+	controlParameters->setIT(controlParameters->getIT() + 1);
+
+
+
+BEGINITERATION:
+
 
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << " Total Passed time " << gent << " seconds" << endl;
-	writerThread.join();
+	lstWriterThread.join();
+	nodWriterThread.join();
+	eleWriterThread.join();
+	obsWriterThread.join();
 	int sleepTime = 45000; // in milli seconds
 	cout << "Sleeping now for " << sleepTime/1000 << " seconds" << endl;
 	Sleep(sleepTime);

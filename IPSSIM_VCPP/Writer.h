@@ -8,7 +8,10 @@ using namespace std;
 class Writer
 {
 public:
-	static Writer* Instance();
+	static Writer* LSTInstance();
+	static Writer* NODInstance();
+	static Writer* ELEInstance();
+	static Writer* OBSInstance();
 	void addToWriteContainer(string str);
 	deque<string> getWriteContainer();
 	void popFrontWriteContainer();
@@ -17,7 +20,10 @@ private:
 	
 	Writer();
 	virtual ~Writer();
-	static Writer * m_pInstance;
+	static Writer * mLST_pInstance;
+	static Writer * mNOD_pInstance;
+	static Writer * mELE_pInstance;
+	static Writer * mOBS_pInstance;
 };
 
 #endif

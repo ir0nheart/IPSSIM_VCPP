@@ -10,6 +10,7 @@ ObservationPoints::ObservationPoints(string OBSNAM, string schedule, string OBSF
 	this->YOBS = YOBS;
 	this->ZOBS = ZOBS;
 	this->obsElement = -1;
+	P1 = P2 = U1 = U2 = C1 = C2 = E1 = E2 = R1 = R2 = S1 = S2 = 0;
 }
 
 string ObservationPoints::getOBSNAM(){
@@ -63,3 +64,28 @@ double ObservationPoints::getXSI(){ return this->XSI; }
 double ObservationPoints::getETA(){ return this->ETA; }
 double ObservationPoints::getZET(){ return this->ZET; }
 int ObservationPoints::getObsElement(){ return this->obsElement; }
+
+void ObservationPoints::setP1(double val){ this->P1 = val; }
+void ObservationPoints::setU1(double val){ this->U1 = val; }
+void ObservationPoints::setC1(double val){ this->C1 = val; }
+void ObservationPoints::setE1(double val){ this->E1 = val; }
+void ObservationPoints::setR1(double val){ this->R1 = val; }
+void ObservationPoints::setS1(double val){ this->S1 = val; }
+double ObservationPoints::getC1(){ return this->C1; }
+double ObservationPoints::getU1(){ return this->U1; }
+double ObservationPoints::getP1(){ return this->P1; }
+double ObservationPoints::getE1(){ return this->E1; }
+double ObservationPoints::getR1(){ return this->R1; }
+double ObservationPoints::getS1(){ return this->S1; }
+void ObservationPoints::setP2(double val){ this->P2 = val; }
+void ObservationPoints::setU2(double val){ this->U2 = val; }
+void ObservationPoints::setC2(double val){ this->C2 = val; }
+void ObservationPoints::setE2(double val){ this->E2 = val; }
+void ObservationPoints::setR2(double val){ this->R2 = val; }
+void ObservationPoints::setS2(double val){ this->S2 = val; }
+double ObservationPoints::getC2(){ return this->C2; }
+double ObservationPoints::getU2(){ return this->U2; }
+double ObservationPoints::getP2(){ return this->P2; }
+double ObservationPoints::getE2(){ return this->E2; }
+double ObservationPoints::getR2(){ return this->R2; }
+double ObservationPoints::getS2(){ return this->S2; }

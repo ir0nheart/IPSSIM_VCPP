@@ -33,6 +33,7 @@ public:
 	void setVANG1(double val);
 	void setVANG2(double val);
 	void setElementNodes(int * Nodes);
+	int * getElementNodes();
 	//Getters
 	int getElementNumber();
 	int getLREG();

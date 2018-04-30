@@ -5,15 +5,16 @@ Layer::Layer()
 {
 }
 
-Layer::Layer(int layerNo, double unitWeight, double topLayer, double bottomLayer)
+Layer::Layer(int layerNo, double unitWeight, double topLayer, double bottomLayer,int satCond)
 {
 	this->layerNo = layerNo;
 	this->unitWeight = unitWeight;
 	this->topLayer = topLayer;
 	this->bottomLayer = bottomLayer;
+	this->satCond = satCond;
 }
 
-
+int Layer::getSatCond(){ return this->satCond; }
 int Layer::getLayerNumber(){
 	return this->layerNo;
 }

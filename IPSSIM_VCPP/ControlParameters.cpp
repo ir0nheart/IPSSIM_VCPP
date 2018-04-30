@@ -7,6 +7,7 @@
 #include <stdlib.h>  
 
 
+
 using namespace std;
 mutex mtx;
 int foundObs = 0;
@@ -55,6 +56,8 @@ enum Colors{
 	BRIGHT_YELLOW = 14,
 	BRIGHT_WHITE = 15
 };
+const string ControlParameters::Headers[] = { "Node", "X", "Y", "Z", "Pressure", "Concentration", "Saturation", "Eff. Stress", "Stress Rat." };
+
 const string ControlParameters::SOLWRD[] = { "'DIRECT'", "'CG'", "'GMRES'", "'ORTHOMIN'" };
 const string ControlParameters::SOLNAM[] = { "BANDED GAUSSIAN ELIMINATION (DIRECT)",
 "IC-PRECONDITIONED CONJUGATE GRADIENT",
@@ -119,6 +122,9 @@ double ControlParameters::getSMWH(){
 	return this->SMWH;
 }
 
+void ControlParameters::setWaterTable(double val){ this->waterTable = val; }
+double ControlParameters::getWaterTable(){ return this->waterTable; }
+
 
 void ControlParameters::setTimeStepDivide(int TimeStepDivide){
 	this->timeStepDivide = TimeStepDivide;
@@ -162,6 +168,19 @@ vector<Schedule *> ControlParameters::getListOfSchedules(){
 ControlParameters::ControlParameters()
 {
 	isNewRun = true;
+	isNewNod = true;
+	isNewObs = true;
+
+	nodeHeaders["'N'"] = ControlParameters::Headers[0];
+	nodeHeaders["'X'"] = ControlParameters::Headers[1];
+	nodeHeaders["'Y'"] = ControlParameters::Headers[2];
+	nodeHeaders["'Z'"] = ControlParameters::Headers[3];
+	nodeHeaders["'P'"] = ControlParameters::Headers[4];
+	nodeHeaders["'U'"] = ControlParameters::Headers[5];
+	nodeHeaders["'S'"] = ControlParameters::Headers[6];
+	nodeHeaders["'ES'"] = ControlParameters::Headers[7];
+	nodeHeaders["'RU'"] = ControlParameters::Headers[8];
+
 
 }
 
@@ -182,9 +201,11 @@ void ControlParameters::setTITLE2(string str){
 
 void ControlParameters::addLayer(Layer* lay){
 	layers.push_back(lay);
+	sort(layers.begin(), layers.end(), [](Layer* a, Layer* b){return (abs(a->getLayerBottom()) < abs(b->getLayerBottom())); });
+
 }
 //void ControlParameters::addDataSet(string dataSet,string dataSetName){
-//	DataSet *dataSetx = new DataSet(dataSetName);
+//	DataSet *dataSetx = new DataSet(dataSetName)
 //	dataSetx->setRawData(dataSet);
 //	dataSetMap[dataSetName] = dataSetx;
 //	dataSetContainer.push_back(dataSetx);
@@ -203,7 +224,7 @@ vector<DataSet*> ControlParameters::getDataSets(){
 
 void ControlParameters::setParameters(){
 	Timer t;
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	string logLine = "";
 	Miscellaneous::banner();
 	/*for (DataSet* x : dataSetContainer){
@@ -583,7 +604,8 @@ int ControlParameters::getISSFLO(){ return this->ISSFLO; }
 int ControlParameters::getISSTRA(){ return this->ISSTRA; }
 int ControlParameters::getIREAD(){ return this->IREAD; }
 int ControlParameters::getISTORE(){ return this->ISTORE; }
-
+void ControlParameters::setIT(int val){ this->IT = val; }
+int ControlParameters::getIT(){ return this->IT; }
 void ControlParameters::setITRMAX(int val){ this->ITRMAX = val; }
 void ControlParameters::setRPMAX(double val){ this->RPMAX = val; }
 void ControlParameters::setRUMAX(double val){ this->RUMAX = val; }
@@ -787,7 +809,7 @@ void ControlParameters::Source(string key){
 	      //CALL SOURCE(QIN, UIN, IQSOP, QUIN, IQSOU, IQSOPT, IQSOUT,IBCSOP, IBCSOU)
 	//SUBROUTINE SOURCE(QIN, UIN, IQSOP, QUIN, IQSOU, IQSOPT, IQSOUT, IBCSOP, IBCSOU)
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 	
 	string line;
@@ -1066,7 +1088,7 @@ void ControlParameters::Bound(string key){
           //CALL BOUND(IPBC, PBC, IUBC, UBC, IPBCT, IUBCT, IBCPBC, IBCUBC, GNUP1, GNUU1)
 	//SUBROUTINE BOUND(IPBC, PBC, IUBC, UBC, IPBCT, IUBCT, IBCPBC, IBCUBC, GNUP1, GNUU1)
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 
 
@@ -1217,7 +1239,7 @@ void ControlParameters::Bound(string key){
 
 void ControlParameters::Connec(){
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 
 	if (this->KINCID == 0){
@@ -1426,12 +1448,66 @@ void ControlParameters::writeToLSTString(string str){
 	}
 
 }
+void ControlParameters::writeToNODString(string str){
+	string filename = InputFiles::Instance()->getInputDirectory() + "\\" + InputFiles::Instance()->filesToWrite["NOD"];
+	ofstream outfile;
+	if (!isNewNod){//is_file_exist(filename)){
+		outfile.open(filename, std::ios::app);
+
+		outfile << str << endl;
+
+	}
+	else{
+		outfile.open(filename, std::ios_base::out);
+
+		outfile << str << endl;
+		isNewNod = false;
+	}
+}
+
+void ControlParameters::writeToELEString(string str){
+	string filename = InputFiles::Instance()->getInputDirectory() + "\\" + InputFiles::Instance()->filesToWrite["ELE"];
+	ofstream outfile;
+	if (!isNewNod){//is_file_exist(filename)){
+		outfile.open(filename, std::ios::app);
+
+		outfile << str << endl;
+
+	}
+	else{
+		outfile.open(filename, std::ios_base::out);
+
+		outfile << str << endl;
+		isNewNod = false;
+	}
+}
+
+
+void ControlParameters::writeToOBSString(string str){
+	string filename = InputFiles::Instance()->getInputDirectory() + "\\" + InputFiles::Instance()->filesToWrite["OBS"];
+	ofstream outfile;
+	if (!isNewObs){//is_file_exist(filename)){
+		outfile.open(filename, std::ios::app);
+
+		outfile << str << endl;
+
+	}
+	else{
+		outfile.open(filename, std::ios_base::out);
+
+		outfile << str << endl;
+		isNewObs = false;
+	}
+}
+
+
+
 void ControlParameters::popWriteContainer(){
 	writeContainer.pop_front();
 }
 void ControlParameters::parseDataSet_14B(){
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 	Timer gent, t;
 	
@@ -1770,7 +1846,7 @@ void ControlParameters::parseDataSet_14B(){
 //}
 void ControlParameters::parseDataSet_15B(){
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 	int i;
 	DataSet * dataSet = dataSetMap["DataSet_15B"];
@@ -2561,6 +2637,56 @@ void ControlParameters::createNodes(){
 		nodeContainer[i]->setQUIN(nodeQUIN[i]);
 		nodeContainer[i]->setPVEC(nodePVEC[i]);
 		nodeContainer[i]->setUVEC(nodeUVEC[i]);
+		nodeContainer[i]->setSWT(1.0);
+		nodeContainer[i]->setTOTSTR(0);
+		nodeContainer[i]->setPOREP(0);
+		nodeContainer[i]->setCNUB(0);
+
+			if (KTYPE[0] == 3){
+				if (abs(nodeContainer[i]->getZCoord()) == 0){
+					nodeContainer[i]->setLayer(layers[0],0);
+				}
+				else{
+					for (int j = 0; j<layers.size();j++){
+					if (abs(nodeContainer[i]->getZCoord()) <= abs(layers[j]->getLayerBottom()) && abs(nodeContainer[i]->getZCoord()) > abs(layers[j]->getLayerTop())){
+						nodeContainer[i]->setLayer(layers[j],j);
+
+					}
+				}
+			}
+			}
+			else{
+
+			}
+
+			for (int j = 0; j < nodeContainer[i]->getLayerN(); j++){
+				nodeContainer[i]->setTOTSTR((abs(layers[j]->getLayerBottom()) - abs(layers[j]->getLayerTop()))*layers[j]->getLayerUnitWeight() + nodeContainer[i]->getTOTSTR());
+				if (layers[j]->getSatCond() == 0)
+					nodeContainer[i]->setPOREP((abs(layers[j]->getLayerBottom()) - abs(waterTable)) * 9810 + nodeContainer[i]->getPOREP());
+				if (layers[j]->getSatCond() == 1)
+					nodeContainer[i]->setPOREP((abs(layers[j]->getLayerBottom()) - abs(layers[j]->getLayerTop())) * 9810 + nodeContainer[i]->getPOREP());
+			}
+
+			nodeContainer[i]->setTOTSTR((abs(nodeContainer[i]->getZCoord()) - abs(layers[nodeContainer[i]->getLayerN()]->getLayerTop()))*layers[nodeContainer[i]->getLayerN()]->getLayerUnitWeight() + nodeContainer[i]->getTOTSTR());
+			if (layers[nodeContainer[i]->getLayerN()]->getSatCond() == 0){
+				if (abs(nodeContainer[i]->getZCoord()) > abs(waterTable)){
+					nodeContainer[i]->setPOREP((abs(nodeContainer[i]->getZCoord()) - abs(waterTable)) * 9810 + nodeContainer[i]->getPOREP());
+				}
+
+			}
+				
+			if (layers[nodeContainer[i]->getLayerN()]->getSatCond() == 1)
+				nodeContainer[i]->setPOREP((abs(nodeContainer[i]->getZCoord()) - abs(layers[nodeContainer[i]->getLayerN()]->getLayerTop())) * 9810 + nodeContainer[i]->getPOREP());
+
+			nodeContainer[i]->setEFFSTR(nodeContainer[i]->getTOTSTR() - nodeContainer[i]->getPOREP());
+			nodeContainer[i]->setEFFSTRI(nodeContainer[i]->getEFFSTR());
+			if (abs(nodeContainer[i]->getEFFSTRI()) != 0){
+				nodeContainer[i]->setSTRRAT(nodeContainer[i]->getEFFSTR() / nodeContainer[i]->getEFFSTRI());
+			}
+			else{
+				nodeContainer[i]->setSTRRAT(1.0);
+			}
+
 	}
 
 }
@@ -2605,7 +2731,7 @@ int ControlParameters::getNELT(){ return this->NELT; }
 
 void ControlParameters::BANWID(){
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 
 	logLine.append("\n\n\n\n           **** MESH ANALYSIS ****\n\n");
@@ -3193,7 +3319,7 @@ END                                                                OUTLST3......
 void ControlParameters::OUTLST3(int ML, int ISTOP,int IGOI, int IERRP,int ITRSP,double ERRP, int IERRU,int ITRSU,double ERRU ){
 	//args ML, ISTOP, IGOI, IERRP, ITRSP, ERRP, IERRU, ITRSU, ERRU, PVEC, UVEC, VMAG, VANG1, VANG2, SW, SWT, SWB
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	char buff[512];
 
 	ITREL = IT - ITRST;
@@ -3423,10 +3549,731 @@ THOUSAND:
 	logLine.clear();
 }
 
+
+void ControlParameters::setOnceNOD(bool val){ this->onceNOD = val; }
+bool ControlParameters::getOnceNOD(){ return this->onceNOD; }
+void ControlParameters::setOnceOBS(bool val){ this->onceOBS = val; }
+bool ControlParameters::getOnceOBS(){ return this->onceOBS; }
+
 void ControlParameters::OUTNOD(){
+
+	string logLine = "";
+	Writer * logWriter = Writer::NODInstance();
+	char buff[512];
+	int KT,KTMAX; //Number of printed time steps
+	int JT; // Time Step Value
+	int TS; // Time Step Information
+	double DELTK; // time sstep increment
+	vector<double> TT;
+	vector<int> ITT;
+	vector<int> ISHORP, ISTORC, ISSATU;
+	int LCHORP, LCTORC;
+	char CPSATU, CPTORC, CPHORP;
+	//TT.push_back(0.0);
+	//ITT.push_back(0);
+	//ISHORP.push_back(0);
+	//ISTORC.push_back(0);
+	//ISSATU.push_back(0);
+	BCSFL = new bool[ITMAX + 1]{};
+	BCSTR = new bool[ITMAX + 1]{};
+
+	string header = "\nNode              X              Y              Z       Pressure  Concentration     Saturation\n";
+
+	if (onceNOD == false){
+
+		if (ISSTRA != 1){
+			KT = 1;
+		}
+		else{
+			KT = 0;
+		}
+		for (int i = 1; i < ITMAX; i++){
+			if (((i%NCOLPR) == 0) || (i == ITRST) || ((i == (ITRST + 1)) && ((ISSTRA != 0) || (NCOLPR >0)))){
+				KT = KT + 1;
+			}
+		}
+		if (ITMAX > 1 && (ITMAX%NCOLPR != 0))
+			KT = KT + 1;
+
+			KTMAX = KT;
+			TS = TSTART;
+			JT = 0;
+			KT = 0;
+			DELTK = DELT;
+
+			
+
+			// pressure conc sat print y or no
+			// KPANDS pressure and sat
+			if (KPANDS == 1){
+				CPHORP = CPSATU = 'Y';
+			}
+			else{ CPHORP = CPSATU = 'N'; }
+			if (KCORT == 1){
+				CPTORC = 'Y';
+
+			}
+			else{ CPTORC = 'N'; }
+			//KCORD concentration
+
+			if (ISSTRA != 1){
+				KT = KT + 1;
+				TT.push_back(TS);
+				ITT.push_back(JT);
+				ISHORP.push_back(0);
+				ISTORC.push_back(0);
+				ISSATU.push_back(0);
+			}
+
+			for (int i = 0; i <= ITMAX; i++){
+				TS = getTIMESTEPSSchedule()->getSList()[i].first;
+				JT = getTIMESTEPSSchedule()->getSList()[i].second;
+
+				if ((JT%NPCYC == 0) || (BCSFL[JT] || JT == 1))
+					LCHORP = JT;
+				if ((JT%NUCYC == 0) || (BCSTR[JT] || JT == 1))
+					LCTORC = JT;
+				if ((JT%NCOLPR == 0) || (JT == ITRST) || ((JT == (ITRST + 1)) && ((ISSTRA != 0) || NCOLPR >0))){
+					KT = KT + 1;
+				TT.push_back(TS);
+				ITT.push_back(JT);
+				ISHORP.push_back(LCHORP);
+				ISTORC.push_back(LCTORC);
+				ISSATU.push_back(LCHORP);
+			}
+			}
+
+			if (ISSTRA == 1){
+				TT.push_back(TSTART);
+				ITT.push_back(0);
+			}
+
+			if (ITMAX > 1 && (ITMAX%NCOLPR != 0)){
+				KT = KT + 1;
+				TS = getTIMESTEPSSchedule()->getSList()[ITMAX].first;
+				TT.push_back(TS);
+				ITT.push_back(ITMAX);
+				if ((ITMAX%NPCYC == 0) || (BCSFL[ITMAX]))
+					LCHORP = ITMAX;
+				if ((ITMAX%NPCYC == 0) || (BCSTR[ITMAX]))
+					LCTORC = ITMAX;
+				ISHORP.push_back(LCHORP);
+				ISTORC.push_back(LCTORC);
+				ISSATU.push_back(LCHORP);
+			}
+
+			if (ISSFLO != 0){
+				for (int i = 0; i < KTMAX; i++){
+					ISHORP.push_back(0);
+					ISSATU.push_back(0);
+				}
+			}
+
+			if (IREAD == 1){ KTPRN = KTMAX; }
+			else{ KTPRN = 0;
+			for (int i = 1; i <= KTMAX; i++){
+				if (ITT[i] > ITRST)
+					KTPRN = KTPRN + 1;
+			}
+			}
+
+			logLine.append("## " + TITLE1 + "\n");
+			logLine.append("## " + TITLE2 + "\n");
+			logLine.append("## \n");
+
+			string CTYPE2;
+			if (KTYPE[1] > 1){
+
+				if (KTYPE[1] == 3) { CTYPE2 = "BLOCKWISE MESH"; }
+				else{ CTYPE2 = "REGULAR MESH"; }
+
+				if (KTYPE[0] == 3){ // 3D
+					_snprintf(buff, sizeof(buff), "## %1d-D,", KTYPE[0]);
+					logLine.append(buff + CTYPE2);
+					_snprintf(buff, sizeof(buff), "  (%9d)*(%9d)*(%9d) = %9d Nodes ( %9d Elems)\n", NN1, NN2, NN3, NN, NE);
+					logLine.append(buff);
+					logLine.append("## \n");
+				}
+				else{ // 2D
+					_snprintf(buff, sizeof(buff), "## %1d-D,", KTYPE[0]);
+					logLine.append(buff + CTYPE2);
+					_snprintf(buff, sizeof(buff), "  (%9d)*(%9d) = %9d Nodes ( %9d Elems)\n", NN1, NN2, NN, NE);
+					logLine.append(buff);
+					logLine.append("## \n");
+
+				}
+
+			}
+			else if (KTYPE[1] == 1){
+				_snprintf(buff, sizeof(buff), "## %1d-D, LAYERED MESH [", KTYPE[0]);
+				logLine.append(buff);
+				logLine.append(LAYSTR + "]");
+				_snprintf(buff, sizeof(buff), "       (%9d)*(%9d) = %9d Nodes ( %9d Elems)\n", NLAYS, NNLAY, NN, NE);
+				logLine.append(buff);
+				logLine.append("## \n");
+			}
+			else{
+				_snprintf(buff, sizeof(buff), "## % 1d - D, IRREGULAR MESH", KTYPE[0]);
+				logLine.append(buff);
+				logLine.append(string(40, ' '));
+				_snprintf(buff, sizeof(buff), "%9d Nodes ( %9d Elems)\n", NN, NE);
+				logLine.append(buff);
+				logLine.append("## \n");
+			}
+
+
+			logLine.append("## " + string(92, '=') +"\n## NODEWISE RESULTS" + string(48,' '));
+			_snprintf(buff, sizeof(buff), "%9d Time steps printed\n",KTPRN);
+			logLine.append(buff);
+			logLine.append("## " + string(92, '=') + "\n## \n");
+			logLine.append("##    Time steps" + string(23, ' ') + "[Printed? / Latest time step computed]\n");
+			logLine.append("##    in this file      Time (sec)         Press          Conc           Sat\n");
+			logLine.append("##   " + string(14, '-') + "   " + string(13, '-') + "    " + string(12, '-') + "   " + string(12, '-') + "   " + string(12, '-') + "\n");
+			
+			
+
+			for (int i = 1; i <= KTMAX; i++){
+				if (ITT[i] >= ITRST){
+					_snprintf(buff, sizeof(buff), "##        %8d    %+13.6e      %c %8d     %c %8d     %c %8d\n",ITT[i],TT[i],CPHORP,ISHORP[i],CPTORC,ISTORC[i],CPSATU,ISSATU[i]);
+					logLine.append(buff);
+				}
+			}
+
+
+
+			onceNOD = true;
+	}
+	
+	if ((IT == 0) || ((IT == 1) && (ISSTRA == 1))){
+		DURN = 0.0;
+		TOUT = TSTART;
+		ITOUT = 0;
+	}
+	else{
+		DURN = DELT;
+		TOUT = TSEC;
+		ITOUT = IT;
+	}
+
+	logLine.append("## \n");
+	logLine.append("## " + string(98, '=')+"\n");
+	_snprintf(buff, sizeof(buff), "## TIME STEP %8d",ITOUT);
+	logLine.append(buff + string(26,' '));
+	_snprintf(buff, sizeof(buff), "Duration: %+11.4e sec      Time: %+11.4e sec\n", DURN,TOUT);
+	logLine.append(buff);
+	logLine.append("## " + string(98, '=') + "\n");
+
+
+	
+
+		
+	
+
+	//if (NCOL[0] == "'N'"){ // printNodeNumber
+		logLine.append("##");
+		for (string a : NCOL){
+			int fil = 15- nodeHeaders[a].length();
+			logLine.append(string(fil, ' ') + nodeHeaders[a] + "  ");
+		}
+
+		logLine.append("\n");
+
+		for (int i = 1; i <= NN; i++){
+	
+			_snprintf(buff, sizeof(buff), "  %+14.7e  %+14.7e  %+14.7e  %+14.7e  %+14.7e  %+14.7e  %+14.7e  %+14.7e\n",nodeContainer[i]->getXCoord(), nodeContainer[i]->getYCoord(), nodeContainer[i]->getZCoord(), nodeContainer[i]->getPVEC(), nodeContainer[i]->getUVEC(), nodeContainer[i]->getSWT(), nodeContainer[i]->getEFFSTR(), nodeContainer[i]->getSTRRAT());
+			logLine.append(buff);
+		}
+
+
+		logWriter->writeContainer.push_back(logLine);
+	
 
 }
 
 void ControlParameters::OUTOBS(){
+	string logLine = "";
+	Writer * logWriter = Writer::OBSInstance();
+	char buff[512];
+	int KT, KTMAX,LCNT; //Number of printed time steps
+	double TJT,SJT;
+	bool IMPRTD = false;
+	double LCHORP, LCTORC, TOB, SOB;
+	vector<double> TT;
+	vector<int> DITT;
+	vector<int> ISHORP, ISTORC, ISSATU;
+	BCSFL = new bool[ITMAX + 1]{};
+	BCSTR = new bool[ITMAX + 1]{};
 
+	Schedule * tmp = nullptr;
+	if (onceOBS == false){
+		// First Call for this File - Create File Header
+		// If no observation points, write message and return
+		if (observationPointsContainer.size() == 0){
+			logLine.append("## " + TITLE1 + "\n");
+			logLine.append("## " + TITLE2 + "\n");
+			logLine.append("## \n");
+			logLine.append("\n  *** NO OBSERVATION POINTS SPECIFIED (NOBS=0) ***");
+			onceOBS = true;
+			return;
+		}
+
+		for (Schedule * sch : listOfSchedules){
+			if (sch->getScheduleName() == "Timed_Obs"){
+				tmp = sch;
+				break;
+			}
+		}
+
+		if (ISSTRA != 0){
+
+		}
+
+		//if (ISSTRA != 0){
+		//	KTMAX = 1;
+		//	IMPRTD = true;
+		//}
+		//else{
+
+		//	KTMAX = 2;
+		//	IMPRTD = false;
+		//	// Find obs Schedule
+		//	
+		//	for (Schedule * sch : listOfSchedules){
+		//		if (sch->getScheduleName() == "Timed_Obs"){
+		//			tmp = sch;
+		//			break;
+		//		}
+		//	}
+
+		//	int sz = tmp->getSList().size();
+		//	if (sz != 0){		
+		//			KTMAX = KTMAX + 1;
+		//			SOB = tmp->getSList()[0].second;
+		//			if (SOB == ITRST){
+		//				KTMAX = KTMAX + 1;
+		//			}
+		//			for (int i = 1; i < sz; i++){
+		//				KTMAX = KTMAX + 1;
+		//			}
+		//			SOB = tmp->getSList()[sz-1].second;
+		//			if (SOB == ITMAX){
+		//				KTMAX = KTMAX - 1;
+		//				IMPRTD = true;
+		//			}
+
+		//	}
+
+		//}
+
+		//
+
+		//if (ISSTRA != 0){
+		//	KT = 1;
+		//	TT.push_back(TSTART);
+		//	DITT.push_back(1.0);
+		//	ISHORP.push_back(0);
+		//	ISTORC.push_back(1);
+		//	ISSATU.push_back(0);
+		//}
+		//else{
+		//	KT = 0;
+		//	for (Schedule * sch : listOfSchedules){
+		//		if (sch->getScheduleName() == "Timed_Obs"){
+		//			tmp = sch;
+		//			break;
+		//		}
+		//	}
+
+		//	LCNT = 1;
+		//	TOB = tmp->getSList()[0].first;
+		//	SOB = tmp->getSList()[0].second;
+		//	LCTORC = 0;
+		//	LCHORP = 0;
+
+		//	if (ITRST > 0){
+		//		for (int i = 0; i < ITRST; i++){
+		//			if (i%NPCYC == 0 || BCSFL[i] || i == 1)
+		//				LCHORP = i; 
+		//			if (i%NUCYC == 0 || BCSTR[i] || i == 1)
+		//				LCTORC = i;
+		//		}
+		//	}
+		//	TJT = tmp->getSList()[ITRST].first;
+		//	SJT = tmp->getSList()[ITRST].second;
+		//	int j = 1;
+		//	while ((SOB < SJT) && (LCNT < tmp->getSList().size())){
+		//		TOB = tmp->getSList()[j].first;
+		//		SOB = tmp->getSList()[j].second;
+		//		LCNT = LCNT + 1;
+		//		j++;
+		//	}
+
+		//	KT = KT + 1;
+		//	TT.push_back(TJT);
+		//	DITT.push_back(SJT);
+		//	ISHORP.push_back(LCHORP);
+		//	ISTORC.push_back(LCTORC);
+		//	ISSATU.push_back(LCHORP);
+
+		//	if ((SOB == SJT) && (LCNT < tmp->getSList().size())){
+		//		TOB = tmp->getSList()[0].first;
+		//		SOB = tmp->getSList()[0].second;
+		//		LCNT = LCNT + 1;
+		//	}
+
+		//	for (int i = ITRST+1; i < ITMAX; i++){
+		//		TJT = tmp->getSList()[i].first;
+		//		SJT = tmp->getSList()[i].second;
+		//		if (i%NPCYC == 0 || BCSFL[i] || i == 1)
+		//			LCHORP = i;
+		//		if (i%NUCYC == 0 || BCSTR[i] || i == 1)
+		//			LCTORC = i;
+
+		//		int j = 0;
+		//		while ((SOB <= i) && (LCNT < tmp->getSList().size())){
+		//			KT = KT + 1;
+		//			TT.push_back(TOB);
+		//			DITT.push_back(SOB);
+		//			ISHORP.push_back(LCHORP);
+		//			ISTORC.push_back(LCTORC);
+		//			ISSATU.push_back(LCHORP);
+		//			if (LCNT < tmp->getSList().size()){
+		//				TOB = tmp->getSList()[j].first;
+		//				SOB = tmp->getSList()[j].second;
+		//			}
+		//			
+		//			LCNT = LCNT + 1;
+		//			j++;
+		//		}
+
+		//	}
+
+		//	if (IMPRTD == false){
+		//		KT = KT + 1;
+		//		TT.push_back(TJT);
+		//		DITT.push_back(SJT);
+		//		ISHORP.push_back(ITMAX);
+		//		ISSATU.push_back(ITMAX);
+		//		ISTORC.push_back(ITMAX);
+		//	}
+
+		//	if (ISSFLO != 0){
+		//		for (int KT = 0; KT < KTMAX; KT++){
+		//			ISHORP[KT] = 0;
+		//			ISSATU[KT] = 0;
+		//		}
+		//	}
+
+		//	if (IREAD == 1){
+		//	
+		//		KTPRN = KTMAX;
+
+		//	}
+		//	else{
+		//		KTPRN = 0;
+		//		for (int i = 0; i < KTMAX; i++){
+		//			if (DITT[i] >= ITRST)
+		//				KTPRN = KTPRN + 1;
+		//		}
+		//	}
+
+		//	logLine.append("## " + TITLE1 + "\n");
+		//	logLine.append("## " + TITLE2 + "\n");
+		//	logLine.append("## \n");
+
+		//	string CTYPE2;
+		//	if (KTYPE[1] > 1){
+
+		//		if (KTYPE[1] == 3) { CTYPE2 = "BLOCKWISE MESH"; }
+		//		else{ CTYPE2 = "REGULAR MESH"; }
+
+		//		if (KTYPE[0] == 3){ // 3D
+		//			_snprintf(buff, sizeof(buff), "## %1d-D,", KTYPE[0]);
+		//			logLine.append(buff + CTYPE2);
+		//			_snprintf(buff, sizeof(buff), "  (%9d)*(%9d)*(%9d) = %9d Nodes ( %9d Elems)\n", NN1, NN2, NN3, NN, NE);
+		//			logLine.append(buff);
+		//			logLine.append("## \n");
+		//		}
+		//		else{ // 2D
+		//			_snprintf(buff, sizeof(buff), "## %1d-D,", KTYPE[0]);
+		//			logLine.append(buff + CTYPE2);
+		//			_snprintf(buff, sizeof(buff), "  (%9d)*(%9d) = %9d Nodes ( %9d Elems)\n", NN1, NN2, NN, NE);
+		//			logLine.append(buff);
+		//			logLine.append("## \n");
+
+		//		}
+
+		//	}
+		//	else if (KTYPE[1] == 1){
+		//		_snprintf(buff, sizeof(buff), "## %1d-D, LAYERED MESH [", KTYPE[0]);
+		//		logLine.append(buff);
+		//		logLine.append(LAYSTR + "]");
+		//		_snprintf(buff, sizeof(buff), "       (%9d)*(%9d) = %9d Nodes ( %9d Elems)\n", NLAYS, NNLAY, NN, NE);
+		//		logLine.append(buff);
+		//		logLine.append("## \n");
+		//	}
+		//	else{
+		//		_snprintf(buff, sizeof(buff), "## % 1d - D, IRREGULAR MESH", KTYPE[0]);
+		//		logLine.append(buff);
+		//		logLine.append(string(40, ' '));
+		//		_snprintf(buff, sizeof(buff), "%9d Nodes ( %9d Elems)\n", NN, NE);
+		//		logLine.append(buff);
+		//		logLine.append("## \n");
+		//	}
+
+
+		//	logLine.append("## " + string(92, '=') + "\n## OBSERVATION POINT RESULTS" + string(48, ' '));
+		//	_snprintf(buff, sizeof(buff), "%9d Time steps printed\n", KTPRN);
+		//	logLine.append(buff);
+		//	logLine.append("## " + string(92, '=') + "\n## \n");
+		//	logLine.append("##    Time steps" + string(23, ' ') + "[Printed? / Latest time step computed]\n");
+		//	logLine.append("##    in this file      Time (sec)         Press          Conc           Sat           Eff. Stress           Stress Rat.\n");
+		//	logLine.append("##   " + string(14, '-') + "   " + string(13, '-') + "    " + string(12, '-') + "   " + string(12, '-') + "   " + string(12, '-') + "   " + string(12, '-') + "   " + string(12, '-') + "\n");
+
+
+
+
+
+
+
+
+
+
+		//}
+
+		//}
+
+		logLine.append("## " + TITLE1 + "\n");
+		logLine.append("## " + TITLE2 + "\n");
+		logLine.append("## \n");
+
+		string CTYPE2;
+		if (KTYPE[1] > 1){
+
+			if (KTYPE[1] == 3) { CTYPE2 = "BLOCKWISE MESH"; }
+			else{ CTYPE2 = "REGULAR MESH"; }
+
+			if (KTYPE[0] == 3){ // 3D
+				_snprintf(buff, sizeof(buff), "## %1d-D,", KTYPE[0]);
+				logLine.append(buff + CTYPE2);
+				_snprintf(buff, sizeof(buff), "  (%9d)*(%9d)*(%9d) = %9d Nodes ( %9d Elems)\n", NN1, NN2, NN3, NN, NE);
+				logLine.append(buff);
+				logLine.append("## \n");
+			}
+			else{ // 2D
+				_snprintf(buff, sizeof(buff), "## %1d-D,", KTYPE[0]);
+				logLine.append(buff + CTYPE2);
+				_snprintf(buff, sizeof(buff), "  (%9d)*(%9d) = %9d Nodes ( %9d Elems)\n", NN1, NN2, NN, NE);
+				logLine.append(buff);
+				logLine.append("## \n");
+
+			}
+
+		}
+		else if (KTYPE[1] == 1){
+			_snprintf(buff, sizeof(buff), "## %1d-D, LAYERED MESH [", KTYPE[0]);
+			logLine.append(buff);
+			logLine.append(LAYSTR + "]");
+			_snprintf(buff, sizeof(buff), "       (%9d)*(%9d) = %9d Nodes ( %9d Elems)\n", NLAYS, NNLAY, NN, NE);
+			logLine.append(buff);
+			logLine.append("## \n");
+		}
+		else{
+			_snprintf(buff, sizeof(buff), "## % 1d - D, IRREGULAR MESH", KTYPE[0]);
+			logLine.append(buff);
+			logLine.append(string(40, ' '));
+			_snprintf(buff, sizeof(buff), "%9d Nodes ( %9d Elems)\n", NN, NE);
+			logLine.append(buff);
+			logLine.append("## \n");
+		}
+
+
+		logLine.append("## " + string(108, '=') + "\n## OBSERVATION POINT RESULTS" + string(55, ' '));
+		_snprintf(buff, sizeof(buff), "%9d Time steps printed\n", tmp->getSList().size());
+		logLine.append(buff);
+		logLine.append("## " + string(108, '=') + "\n## \n");
+		logLine.append("##     Time steps" + string(32, ' ') + "[Latest time step computed]\n");
+		logLine.append("##    in this file      Time (sec)         Press          Conc           Sat        Eff. Stress    Stress Rat.\n");
+		logLine.append("##   " + string(14, '-') + "   " + string(13, '-') + "    " + string(12, '-') + "   " + string(12, '-') + "   " + string(12, '-') + "   " + string(12, '-') + "   " + string(12, '-') + "\n");
+		
+		
+		for (pair<double, double> p : tmp->getSList()){
+			_snprintf(buff, sizeof(buff), "## %8d   %+13.6e       %8d       %8d       %8d       %8d       %8d\n", (int)p.second, p.first, (int)p.second, (int)p.second, (int)p.second, (int)p.second, (int)p.second);
+			logLine.append(buff);
+		}
+		logLine.append("##\n## " + string(108, '=') + "\n## \n");
+		logLine.append("##                                   ");
+		
+		for (ObservationPoints* p : observationPointsContainer){
+			string oName = p->getOBSNAM();
+			int lName = oName.size();
+			int firstFill, secondFill;
+			firstFill = (76 - lName) / 2;
+			secondFill = 76 - firstFill - lName;
+			logLine.append(string(firstFill,' ') + oName + string(secondFill, ' ') + "    ");
+		}
+		logLine.append("\n##                                   ");
+		for (ObservationPoints* p : observationPointsContainer){
+			logLine.append(string(76,'-') + "    ");
+		}
+		logLine.append("\n##                                   ");
+		for (ObservationPoints* p : observationPointsContainer){
+			_snprintf(buff, sizeof(buff), "(         %+14.7e,         %+14.7e,         %+14.7e)    ", p->getXOBS(), p->getYOBS(), p->getZOBS());
+			logLine.append(buff);
+		}
+		logLine.append("\n##                                   ");
+		for (ObservationPoints* p : observationPointsContainer){
+			logLine.append(string(76, '-') + "    ");
+		}
+		logLine.append("\n##       Time Step     Time (sec)    ");
+		for (ObservationPoints* p : observationPointsContainer){
+			logLine.append("      Pressure  Concentration     Saturation     Eff.Stress    Stress Rat.      ");
+		}
+		logLine.append("\n");
+
+
+
+		logWriter->writeContainer.push_back(logLine);
+
+
+		onceOBS = true;
+	}
+	logLine.clear();
+	if ((NOBSN - 1) == 0){
+		return;
+	}
+
+	double SFRAC = IT - ceil(IT) + 1.0;
+	if ((IT == 0) || ((IT == 1.0) && (ISSTRA == 1))){
+		TOUT = TSTART;
+	}
+	else{
+		TOUT = TIME;
+	}
+
+	_snprintf(buff, sizeof(buff), "   %15.5f   %+15.7e   ",(double)IT,(double)TOUT);
+	logLine.append(buff);
+	logWriter->writeContainer.push_back(logLine);
+	  for (ObservationPoints* p : observationPointsContainer){
+		  PUSWF(p,SFRAC);
+	  }
+	  logLine.clear();
+	logLine.append("\n");
+	logWriter->writeContainer.push_back(logLine);
+
+	}
+
+
+
+void ControlParameters::setTIME(double val){ this->TIME = val; }
+double ControlParameters::getTIME(){ return this->TIME; }
+
+
+int ControlParameters::getML(){ return this->ML; }
+double ControlParameters::getDLTPM1(){ return this->DLTPM1; }
+double ControlParameters::getDLTUM1(){ return this->DLTUM1; }
+double ControlParameters::getBDELP1(){ return this->BDELP1; }
+double ControlParameters::getBDELP(){ return this->BDELP; }
+double ControlParameters::getBDELU(){ return this->BDELU; }
+void ControlParameters::setML(int val){ this->ML = val; }
+void ControlParameters::setDLTPM1(double val){ this->DLTPM1 = val; }
+void ControlParameters::setDLTUM1(double val){ this->DLTUM1 = val; }
+void ControlParameters::setBDELP1(double val){ this->BDELP1 = val; }
+void ControlParameters::setBDELP(double val){ this->BDELP = val; }
+void ControlParameters::setBDELU(double val){ this->BDELU = val; }
+void ControlParameters::setNOUMAT(int val){ this->NOUMAT = val; }
+int ControlParameters::getNOUMAT(){ return this->NOUMAT; }
+void ControlParameters::setITER(int val){ this->ITER = val; }
+int ControlParameters::getITER(){ return this->ITER; }
+void ControlParameters::setDELTU(double val){ this->DELTU = val; }
+void ControlParameters::setDELTP(double val){ this->DELTP = val; }
+double ControlParameters::getDELTU(){ return this->DELTU; }
+double ControlParameters::getDELTP(){ return this->DELTP; }
+
+void ControlParameters::PUSWF(ObservationPoints *p ,double SFRAC){
+	string logLine = "";
+	Writer * logWriter = Writer::OBSInstance();
+	char buff[512];
+	PUP(p);
+	PU(p);
+	double CSFRAC = 1.0 - SFRAC;
+	double PINT = CSFRAC * p->getP1() + SFRAC* p->getP2();
+	double UINT = CSFRAC * p->getU1() + SFRAC* p->getU2();
+	double CNUBINT = CSFRAC * p->getC1() + SFRAC* p->getC2();
+	double ESINT = CSFRAC * p->getE1() + SFRAC* p->getE2();
+	double RINT = CSFRAC * p->getR1() + SFRAC* p->getR2();
+	double SWTINT = CSFRAC * p->getS1() + SFRAC* p->getS2();
+
+	_snprintf(buff, sizeof(buff), "   %15.7e  %15.7e  %15.7e  %15.7e  %15.7e  ", PINT, UINT, SWTINT, ESINT, RINT);
+	logLine.append(buff);
+	logWriter->writeContainer.push_back(logLine);
+}
+
+void ControlParameters::PU(ObservationPoints *p){
+	if (KTYPE[0] == 2){}
+	else{
+		double XF1 = 1.0 - p->getXOBS();
+		double XF2 = 1.0 + p->getXOBS();
+		double YF1 = 1.0 - p->getYOBS();
+		double YF2 = 1.0 + p->getYOBS();
+		double ZF1 = 1.0 - p->getZOBS();
+		double ZF2 = 1.0 + p->getZOBS();
+
+		double FX[] = { XF1, XF2, XF2, XF1, XF1, XF2, XF2, XF1 };
+		double FY[] = { YF1, YF1, YF2, YF2, YF1, YF1, YF2, YF2 };
+		double FZ[] = { ZF1, ZF1, ZF1, ZF1, ZF2, ZF2, ZF2, ZF2 };
+		double F[8];
+		for (int i = 0; i < 8; i++)
+			F[i] = 0.125*FX[i] * FY[i] * FZ[i];
+
+		p->setP2(0.0);
+		p->setU2(0.0);
+		p->setC2(0.0);
+		p->setE2(0.0);
+		p->setR2(0.0);
+		
+		Element * obsEl = elementContainer[p->getObsElement()];
+		for (int i = 0; i < 8; i++){
+			int nn = obsEl->getElementNodes()[i];
+			p->setP2(p->getP2() + nodeContainer[nn]->getPVEC() * F[i]);
+			p->setU2(p->getU2() + nodeContainer[nn]->getUVEC() * F[i]);
+			p->setC2(p->getC2() + nodeContainer[nn]->getCNUB() * F[i]);
+			p->setS2(p->getS2() + nodeContainer[nn]->getSWT() * F[i]);
+		}
+	}
+}
+
+void ControlParameters::PUP(ObservationPoints *p){
+	if (KTYPE[0] == 2){}
+	else{
+		double XF1 = 1.0 - p->getXOBS();
+		double XF2 = 1.0 + p->getXOBS();
+		double YF1 = 1.0 - p->getYOBS();
+		double YF2 = 1.0 + p->getYOBS();
+		double ZF1 = 1.0 - p->getZOBS();
+		double ZF2 = 1.0 + p->getZOBS();
+
+		double FX[] = { XF1, XF2, XF2, XF1, XF1, XF2, XF2, XF1 };
+		double FY[] = { YF1, YF1, YF2, YF2, YF1, YF1, YF2, YF2 };
+		double FZ[] = { ZF1, ZF1, ZF1, ZF1, ZF2, ZF2, ZF2, ZF2 };
+		double F[8];
+		for (int i = 0; i < 8; i++)
+			F[i] = 0.125*FX[i] * FY[i] * FZ[i];
+
+		p->setP1(0.0);
+		p->setU1(0.0);
+		p->setC1(0.0);
+		p->setE1(0.0);
+		p->setR1(0.0);
+
+		Element * obsEl = elementContainer[p->getObsElement()];
+		for (int i = 0; i < 8; i++){
+			int nn = obsEl->getElementNodes()[i];
+			p->setP1(p->getP1() + nodeContainer[nn]->getPM() * F[i]);
+			p->setU1(p->getU1() + nodeContainer[nn]->getUM() * F[i]);
+			p->setC1(p->getC1() + nodeContainer[nn]->getCNUBM() * F[i]);
+			p->setS1(p->getS1() + nodeContainer[nn]->getSWT() * F[i]);
+
+		}
+	}
 }

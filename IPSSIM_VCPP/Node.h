@@ -3,6 +3,7 @@
 #include <vector>
 #include <iomanip>
 #include <iostream>
+#include "Layer.h"
 #pragma once
 
 class Node
@@ -28,6 +29,9 @@ public:
 	void setPVEC(double PVEC);
 	void setUVEC(double UVEC);
 	void setSWT(double SWT);
+	void setEFFSTR(double EFFSTR);
+	void setEFFSTRI(double EFFSTR);
+	void setSTRRAT(double STRRAT);
 	
 	int getNodeNumber();
 	int getNREG();
@@ -44,7 +48,9 @@ public:
 	double getPVEC();
 	double getSWT();
 	double getUVEC();
-	
+	double getEFFSTR();
+	double getEFFSTRI();
+	double getSTRRAT();
 
 
 	//Copy Constructor
@@ -53,12 +59,25 @@ public:
 	// Move Constructor
 	Node(Node &&rhs);
 	Node & operator = (Node &&rhs);
-
+	void setLayer(Layer * lay,int layN);
+	Layer * getLayer();
+	int getLayerN();
 	
-
-
+	void setTOTSTR(double val);
+	void setPOREP(double val);
+	double getTOTSTR();
+	double getPOREP();
+	void setCNUB(double val);
+	double getCNUB();
+	void setPM(double val);
+	void setUM(double val);
+	void setCNUBM(double val);
+	double getPM();
+	double getUM();
+	double getCNUBM();
 private: 
-
+	Layer * layer;
+	int layerN;
 	int NodeNumber;
 	double XCoord;		// X-Coordinate of the Node
 	double YCoord;		// Y-Coordinate of the Node
@@ -74,7 +93,13 @@ private:
 	double PVEC;
 	double UVEC;
 	double SWT;
-
+	double EFFSTR;
+	double EFFSTRI;
+	double STRRAT;
+	double TOTSTR;
+	double POREP;
+	double CNUB;
+	double PM, UM, CNUBM;
 };
 
 #endif

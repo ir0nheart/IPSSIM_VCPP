@@ -207,7 +207,7 @@ void InputFiles::getFileList()
 
 void InputFiles::printInputFilesToLST(){
 	string logLine = "";
-	Writer * logWriter = Writer::Instance();
+	Writer * logWriter = Writer::LSTInstance();
 	logLine.append(string(11, ' ') + "F I L E   U N I T   A S S I G N M E N T S\n\n");
 	logLine.append(string(13, ' ') + "INPUT UNITS : \n");
 	logLine.append(string(14, ' ') + "INP FILE (MAIN INPUT)              ASSIGNED TO ");
@@ -350,6 +350,7 @@ void InputFiles::readPropsINP(){
 	cp->setTEMP(stod(strtok(NULL, del)));
 	cp->setSMWH(stod(strtok(NULL, del)));
 	cp->setTimeStepDivide(stoi(strtok(NULL, del)));
+	cp->setWaterTable(stod(strtok(NULL, del)));
  
 	//remove number of layers tab
 	getline(propsFileStream, mline);
@@ -374,7 +375,19 @@ void InputFiles::readPropsINP(){
 		double unitWeight = stod(strtok(NULL, del));
 		double topLayer = stod(strtok(NULL, del));
 		double bottomLayer = stod(strtok(NULL, del));
-		Layer* lay = new Layer(layNo, unitWeight, topLayer, bottomLayer);
+		int satCond = 0;
+
+		if (abs(bottomLayer) >= abs(cp->getWaterTable())){
+			satCond = -1;
+		}
+		if (abs(cp->getWaterTable()) <= abs(topLayer)){
+			satCond = 1;
+		}
+		if ((abs(cp->getWaterTable()) > abs(topLayer)) && (abs(cp->getWaterTable()) < abs(bottomLayer))){
+			satCond = 0;
+		}
+
+		Layer* lay = new Layer(layNo, unitWeight, topLayer, bottomLayer,satCond);
 		
 		cp->addLayer(lay);
 
