@@ -75,6 +75,28 @@ public:
 	double getPM();
 	double getUM();
 	double getCNUBM();
+	void setPM1(double val);
+	void setUM1(double val);
+	void setPITER(double val);
+	void setUITER(double val);
+	void setRCIT(double val);
+	void setRCITM1(double val);
+	void setDPDTITR(double val);
+	void setPVEL(double val);
+	double getPM1();
+	double getUM1();
+	double getPITER();
+	double getUITER();
+	double getRCIT();
+	double getRCITM1();
+	double getDPDTITR();
+	double getPVEL();
+	void setGNUP1(double val);
+	void setGNUU1(double val);
+	void setQPLITR(double val);
+	double getGNUP1();
+	double getGNUU1();
+	double getQPLITR();
 private: 
 	Layer * layer;
 	int layerN;
@@ -100,6 +122,15 @@ private:
 	double POREP;
 	double CNUB;
 	double PM, UM, CNUBM;
+	double DPDTITR;
+	double PM1;
+	double PITER;
+	double PVEL;
+	double UITER;
+	double RCITM1;
+	double RCIT;
+	double UM1;
+	double GNUU1, GNUP1, QPLITR;
 };
 
 #endif

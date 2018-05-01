@@ -70,6 +70,18 @@ void Node::setCNUB(double val){ this->CNUB = val; }
 void Node::setPM(double val){ this->PM = val; }
 void Node::setUM(double val){ this->UM = val; }
 void Node::setCNUBM(double val){ this->CNUBM = val; }
+void Node::setPM1(double val){ this->PM1 = val; }
+void Node::setUM1(double val){ this->UM1 = val; }
+void Node::setPITER(double val){ this->PITER = val; }
+void Node::setUITER(double val){ this->UITER = val; }
+void Node::setRCIT(double val){ this->RCIT = val; }
+void Node::setRCITM1(double val){ this->RCITM1 = val; }
+void Node::setDPDTITR(double val){ this->DPDTITR = val; }
+void Node::setPVEL(double val){ this->PVEL = val; }
+void Node::setGNUU1(double val){ this->GNUU1 = val; }
+void Node::setGNUP1(double val){ this->GNUP1 = val; }
+void Node::setQPLITR(double val){ this->QPLITR = val; }
+
 // Getters
 int Node::getNodeNumber(){ return this->NodeNumber; }
 int Node::getNREG(){ return this->NREG;}
@@ -97,3 +109,15 @@ double Node::getCNUB(){ return this->CNUB; }
 double Node::getPM(){ return this->PM; }
 double Node::getUM(){ return this->UM; }
 double Node::getCNUBM(){ return this->CNUBM; }
+
+double Node::getPM1(){ return this->PM1; }
+double Node::getUM1(){ return this->UM1; }
+double Node::getPITER(){ return this->PITER; }
+double Node::getUITER(){ return this->UITER; }
+double Node::getRCIT(){ return this->RCIT; }
+double Node::getRCITM1(){ return this->RCITM1; }
+double Node::getDPDTITR(){ return this->DPDTITR; }
+double Node::getPVEL(){ return this->PVEL; }
+double Node::getGNUU1(){ return this->GNUU1; }
+double Node::getGNUP1(){ return this->GNUP1; }
+double Node::getQPLITR(){ return this->QPLITR; }

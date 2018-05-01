@@ -233,7 +233,10 @@ void main(){
 	cout << "\t Finding Observation Points " << t << " seconds" << endl;
 	Miscellaneous::spacer();
 
-	
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_RED);
+	for (ObservationPoints * p : controlParameters->getObservationPointsContainer()){
+		cout << "OBS : " << p->getOBSNAM() << " Element : " << p->getObsElement() << endl;
+	}
 
 	if (UnmapViewOfFile(inputParser->mapViewOfINPFile))
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_RED);
@@ -318,7 +321,9 @@ void main(){
 
 	controlParameters->setTEMAX();
 
-
+	if (controlParameters->getIT() == 0){
+		controlParameters->setDELTLC(controlParameters->getDELT());
+	}
 	controlParameters->setIBCT();
 
 	// Check if Restart
@@ -374,10 +379,12 @@ void main(){
 
 
 	if (controlParameters->getISSTRA() != 0){
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_BLUE);
 		_snprintf(buff, sizeof(buff), " TIME STEP %8d OF %8d ", controlParameters->getIT(), controlParameters->getITMAX());
 		cout << buff << endl;
 	}
 	else{
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_BLUE);
 		_snprintf(buff, sizeof(buff), " TIME STEP %8d OF %8d ;    ELAPSED TIME: %+11.4E OF %11.4E [s]", controlParameters->getIT(), controlParameters->getITMAX(), controlParameters->getTSEC(), controlParameters->getTEMAX());
 		cout << buff << endl;
 	}
@@ -387,10 +394,111 @@ void main(){
 
 BEGINTIMESTEP:
 	controlParameters->setIT(controlParameters->getIT() + 1);
+	controlParameters->setITREL(controlParameters->getIT() - controlParameters->getITRST());
+	controlParameters->setITBCS(controlParameters->getIT());
+	controlParameters->setITER(0);
+	controlParameters->setML(0);
+	controlParameters->setNOUMAT(0);
 
+	// remove followign two lines
+	bool * BCSFL = new bool[controlParameters->getITMAX() + 1]{};
+	bool * BCSTR = new bool[controlParameters->getITMAX() + 1]{};
+	if (controlParameters->getOnceP() && (controlParameters->getITREL() > 2)){
+		if ((((controlParameters->getIT() - 1) % controlParameters->getNPCYC()) != 0) && !BCSFL[controlParameters->getIT() - 1] && !BCSFL[controlParameters->getIT()] && controlParameters->getITRMAX() == 1){
+			controlParameters->setNOUMAT(1);
+		}
+	}
 
+	if (controlParameters->getIT() == 1 && controlParameters->getISSFLO() == 2)
+		goto INCREMENT;
+
+	if (((controlParameters->getIT() % controlParameters->getNPCYC()) != 0) && !BCSFL[controlParameters->getIT()]){
+		controlParameters->setML(2);
+	}
+	if (((controlParameters->getIT() % controlParameters->getNUCYC()) != 0) && !BCSTR[controlParameters->getIT()]){
+		controlParameters->setML(1);
+	}
+
+INCREMENT:
+
+	controlParameters->setTSECM1(controlParameters->getTSEC());
+	controlParameters->setTSEC(controlParameters->getTIMESTEPSSchedule()->getSList()[controlParameters->getIT()].first);
+	controlParameters->setTMIN(controlParameters->getTSEC() / 60.0);
+	controlParameters->setTHOUR(controlParameters->getTSEC() / 3600.0);
+	controlParameters->setTDAY(controlParameters->getTHOUR() / 24.0);
+	controlParameters->setTWEEK(controlParameters->getTDAY() / 7.0);
+	controlParameters->setTMONTH(controlParameters->getTDAY() / 30.4375);
+	controlParameters->setTYEAR(controlParameters->getTDAY() / 365.250);
+	controlParameters->setDELTM1(controlParameters->getDELT());
+	controlParameters->setDELT(controlParameters->getTSEC() - controlParameters->getTSECM1());
+	controlParameters->setRELCHG(abs(controlParameters->getDELT() - controlParameters->getDELTLC()) / controlParameters->getDELTLC());
+
+	if (controlParameters->getRELCHG() > 1e-14){
+		controlParameters->setDELTLC(controlParameters->getDELT());
+		controlParameters->setNOUMAT(0);
+	}
+
+	if (controlParameters->getISSTRA() != 0){
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_BLUE);
+		_snprintf(buff, sizeof(buff), " TIME STEP %8d OF %8d ", controlParameters->getIT(), controlParameters->getITMAX());
+		cout << buff << endl;
+
+	}
+	else{
+		controlParameters->setTELAPS(controlParameters->getTSEC() - controlParameters->getTSTART());
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_BLUE);
+		_snprintf(buff, sizeof(buff), " TIME STEP %8d OF %8d ;  ELAPSED TIME: %11.4E OF %11.4E [s]", controlParameters->getIT(), controlParameters->getITMAX(), controlParameters->getTELAPS(), controlParameters->getTEMAX());
+		cout << buff << endl;
+	}
+
+	if ((controlParameters->getML() - 1) < 0){
+		controlParameters->setDLTPM1(controlParameters->getDELTP());
+		controlParameters->setDLTUM1(controlParameters->getDELTU());
+		controlParameters->setDELTP(controlParameters->getTSEC() - controlParameters->getTSECP0());
+		controlParameters->setDELTU(controlParameters->getTSEC() - controlParameters->getTSECU0());
+		controlParameters->setTSECP0(controlParameters->getTSEC());
+		controlParameters->setTSECU0(controlParameters->getTSEC());
+	}
+	else if ((controlParameters->getML() - 1) == 0){
+		controlParameters->setDLTPM1(controlParameters->getDELTP());
+		controlParameters->setDELTP(controlParameters->getTSEC() - controlParameters->getTSECP0());
+		controlParameters->setTSECP0(controlParameters->getTSEC());
+	}
+	else{
+		controlParameters->setDLTUM1(controlParameters->getDELTU());
+		controlParameters->setDELTU(controlParameters->getTSEC() - controlParameters->getTSECU0());
+		controlParameters->setTSECU0(controlParameters->getTSEC());
+	}
+
+	controlParameters->setBDELP((controlParameters->getDELTP() / controlParameters->getDLTPM1())*0.5);
+	controlParameters->setBDELU((controlParameters->getDELTU() / controlParameters->getDLTUM1())*0.5);
+	controlParameters->setBDELP1(controlParameters->getBDELP() + 1.0);
+	controlParameters->setBDELU1(controlParameters->getBDELU() + 1.0);
 
 BEGINITERATION:
+
+
+	controlParameters->setITER(controlParameters->getITER() + 1);
+
+	if (controlParameters->getITRMAX() != 1){
+		cout << "    NON-LINEARITY ITERATION " << controlParameters->getITER() << endl;
+	}
+
+	if (controlParameters->getML() < 0){
+		for (int i = 1; i <= controlParameters->getNN(); i++){
+			Node * node = controlParameters->getNodeContainer()[i];
+			node->setDPDTITR((node->getPVEC() - node->getPM1()) / controlParameters->getDELTP());
+			node->setPITER(node->getPVEC());
+			node->setPVEL(node->getPVEC());
+			node->setUITER(node->getUVEC());
+			node->setRCITM1(node->getRCIT());
+			node->setRCIT(controlParameters->getRHOW0() + controlParameters->getDRWDU()*(node->getUITER() - controlParameters->getURHOW0()));
+	
+		}
+	}
+
+
+
 
 
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);

@@ -467,11 +467,13 @@ public:
 	double getBDELP1();
 	double getBDELP();
 	double getBDELU();
+	double getBDELU1();
 	void setDLTPM1(double val);
 	void setDLTUM1(double val);
 	void setBDELP1(double val);
 	void setBDELP(double val);
 	void setBDELU(double val);
+	void setBDELU1(double val);
 	void setNOUMAT(int val);
 	int getNOUMAT();
 	void setITER(int val);
@@ -483,14 +485,29 @@ public:
 
 	void PU(ObservationPoints *p );
 	void PUP(ObservationPoints *p);
-	void PUSWF(ObservationPoints * p,double SFRAC);
-
+	string PUSWF(ObservationPoints * p,double SFRAC);
+	void setITREL(double val);
+	void setITBCS(double val);
+	int getITRST();
+	int getITREL();
+	int getITBCS();
+	void setOnceP(bool val);
+	bool getOnceP();
+	void setRELCHG(double val);
+	void setDELTLC(double val);
+	double getRELCHG();
+	double getDELTLC();
+	double getTELAPS();
+	void setTELAPS(double val);
 private:
+	double DELTLC, RELCHG,TELAPS;
 	int NOUMAT;
 	int ITOUT;
 	double DURN, TOUT;
 	bool onceNOD = false;
 	bool onceOBS = false;
+	bool onceP = false;
+	int  ITBCS;
 	int IQSOPT, IQSOUT, IPBCT, IUBCT,IBCT;
 	int NBCFPR, NBCSPR, NBCPPR, NBCUPR;
 	int KINACT;
@@ -755,7 +772,7 @@ private:
 	bool * BCSFL;
 	bool * BCSTR;
 	int ML;
-	double DLTPM1, DLTUM1, BDELP1, BDELP, BDELU;
+	double DLTPM1, DLTUM1, BDELP1, BDELP, BDELU, BDELU1;
 
 
 };

@@ -708,6 +708,21 @@ void ControlParameters::addToNCOL(string str){ this->NCOL.push_back(str); }
 vector<string> ControlParameters::getNCOL(){ return this->NCOL; }
 void ControlParameters::addToLCOL(string str){ this->LCOL.push_back(str); }
 vector<string> ControlParameters::getLCOL(){ return this->LCOL; }
+void ControlParameters::setITREL(double val){ this->ITREL = val; }
+void ControlParameters::setITBCS(double val){ this->ITBCS = val; }
+int ControlParameters::getITREL(){ return this->ITREL; }
+int ControlParameters::getITBCS(){ return this->ITBCS; }
+int ControlParameters::getITRST(){ return this->ITREL; }
+void ControlParameters::setOnceP(bool val){ this->onceP = val; }
+bool ControlParameters::getOnceP(){ return this->onceP; }
+void ControlParameters::setDELTLC(double val){
+	this->DELTLC = val;
+}
+void ControlParameters::setTELAPS(double val){ this->TELAPS = val; }
+double ControlParameters::getTELAPS(){ return this->TELAPS; }
+void ControlParameters::setRELCHG(double val){ this->RELCHG = val; }
+double ControlParameters::getRELCHG(){ return this->RELCHG; }
+double ControlParameters::getDELTLC(){ return this->DELTLC; }
 
 
 void ControlParameters::setNBCFPR(int val){ this->NBCFPR = val; }
@@ -2277,7 +2292,7 @@ void ControlParameters::findObservationElement(int b, int e, int tid){
 	
 	if (N48 == 8){
 		bool found;
-		for (vector<ObservationPoints *>::iterator itx = observationPointsContainer.begin()+b; itx != observationPointsContainer.begin()+e; ++itx){
+		for (vector<ObservationPoints *>::iterator itx = observationPointsContainer.begin()+b; itx != observationPointsContainer.begin()+e+1; ++itx){
 		found = false;
 			for (int i = 1; i <= NE; i++){
 				found = FINDL3ver(i, elementNodes[i], (*itx));
@@ -4129,7 +4144,7 @@ void ControlParameters::OUTOBS(){
 		for (ObservationPoints* p : observationPointsContainer){
 			logLine.append("      Pressure  Concentration     Saturation     Eff.Stress    Stress Rat.      ");
 		}
-		logLine.append("\n");
+		//logLine.append("\n");
 
 
 
@@ -4151,13 +4166,22 @@ void ControlParameters::OUTOBS(){
 		TOUT = TIME;
 	}
 
-	_snprintf(buff, sizeof(buff), "   %15.5f   %+15.7e   ",(double)IT,(double)TOUT);
+	_snprintf(buff, sizeof(buff), "   %15.5f  %14.6e   ",(double)IT,(double)TOUT);
 	logLine.append(buff);
-	logWriter->writeContainer.push_back(logLine);
 	  for (ObservationPoints* p : observationPointsContainer){
-		  PUSWF(p,SFRAC);
+		  logLine.append(PUSWF(p,SFRAC));
+
+		/*  logLine.append(p->getOBSNAM() + " obs Element : ");
+		  logLine.append(to_string(p->getObsElement()) + " Nodes : ");
+		  Element * el = elementContainer[p->getObsElement()];
+		  int * elNodes = el->getElementNodes();
+		  for (int i = 0; i < sizeof(elNodes); i++){
+			  logLine.append(to_string(elNodes[i]) + " ");
+		  }
+		  logWriter->writeContainer.push_back(logLine);
+		  logLine.clear();*/
+
 	  }
-	  logLine.clear();
 	logLine.append("\n");
 	logWriter->writeContainer.push_back(logLine);
 
@@ -4175,12 +4199,14 @@ double ControlParameters::getDLTUM1(){ return this->DLTUM1; }
 double ControlParameters::getBDELP1(){ return this->BDELP1; }
 double ControlParameters::getBDELP(){ return this->BDELP; }
 double ControlParameters::getBDELU(){ return this->BDELU; }
+double ControlParameters::getBDELU1(){ return this->BDELU1; }
 void ControlParameters::setML(int val){ this->ML = val; }
 void ControlParameters::setDLTPM1(double val){ this->DLTPM1 = val; }
 void ControlParameters::setDLTUM1(double val){ this->DLTUM1 = val; }
 void ControlParameters::setBDELP1(double val){ this->BDELP1 = val; }
 void ControlParameters::setBDELP(double val){ this->BDELP = val; }
 void ControlParameters::setBDELU(double val){ this->BDELU = val; }
+void ControlParameters::setBDELU1(double val){ this->BDELU1 = val; }
 void ControlParameters::setNOUMAT(int val){ this->NOUMAT = val; }
 int ControlParameters::getNOUMAT(){ return this->NOUMAT; }
 void ControlParameters::setITER(int val){ this->ITER = val; }
@@ -4190,7 +4216,7 @@ void ControlParameters::setDELTP(double val){ this->DELTP = val; }
 double ControlParameters::getDELTU(){ return this->DELTU; }
 double ControlParameters::getDELTP(){ return this->DELTP; }
 
-void ControlParameters::PUSWF(ObservationPoints *p ,double SFRAC){
+string ControlParameters::PUSWF(ObservationPoints *p ,double SFRAC){
 	string logLine = "";
 	Writer * logWriter = Writer::OBSInstance();
 	char buff[512];
@@ -4204,20 +4230,19 @@ void ControlParameters::PUSWF(ObservationPoints *p ,double SFRAC){
 	double RINT = CSFRAC * p->getR1() + SFRAC* p->getR2();
 	double SWTINT = CSFRAC * p->getS1() + SFRAC* p->getS2();
 
-	_snprintf(buff, sizeof(buff), "   %15.7e  %15.7e  %15.7e  %15.7e  %15.7e  ", PINT, UINT, SWTINT, ESINT, RINT);
-	logLine.append(buff);
-	logWriter->writeContainer.push_back(logLine);
+	_snprintf(buff, sizeof(buff), "%+14.6e %+14.6e %+14.6e %+14.6e %+14.6e      ", PINT, UINT, SWTINT, ESINT, RINT);
+	return buff;
 }
 
 void ControlParameters::PU(ObservationPoints *p){
 	if (KTYPE[0] == 2){}
 	else{
-		double XF1 = 1.0 - p->getXOBS();
-		double XF2 = 1.0 + p->getXOBS();
-		double YF1 = 1.0 - p->getYOBS();
-		double YF2 = 1.0 + p->getYOBS();
-		double ZF1 = 1.0 - p->getZOBS();
-		double ZF2 = 1.0 + p->getZOBS();
+		double XF1 = 1.0 - p->getXSI();
+		double XF2 = 1.0 + p->getXSI();
+		double YF1 = 1.0 - p->getETA();
+		double YF2 = 1.0 + p->getETA();
+		double ZF1 = 1.0 - p->getZET();
+		double ZF2 = 1.0 + p->getZET();
 
 		double FX[] = { XF1, XF2, XF2, XF1, XF1, XF2, XF2, XF1 };
 		double FY[] = { YF1, YF1, YF2, YF2, YF1, YF1, YF2, YF2 };
@@ -4246,12 +4271,12 @@ void ControlParameters::PU(ObservationPoints *p){
 void ControlParameters::PUP(ObservationPoints *p){
 	if (KTYPE[0] == 2){}
 	else{
-		double XF1 = 1.0 - p->getXOBS();
-		double XF2 = 1.0 + p->getXOBS();
-		double YF1 = 1.0 - p->getYOBS();
-		double YF2 = 1.0 + p->getYOBS();
-		double ZF1 = 1.0 - p->getZOBS();
-		double ZF2 = 1.0 + p->getZOBS();
+		double XF1 = 1.0 - p->getXSI();
+		double XF2 = 1.0 + p->getXSI();
+		double YF1 = 1.0 - p->getETA();
+		double YF2 = 1.0 + p->getETA();
+		double ZF1 = 1.0 - p->getZET();
+		double ZF2 = 1.0 + p->getZET();
 
 		double FX[] = { XF1, XF2, XF2, XF1, XF1, XF2, XF2, XF1 };
 		double FY[] = { YF1, YF1, YF2, YF2, YF1, YF1, YF2, YF2 };
