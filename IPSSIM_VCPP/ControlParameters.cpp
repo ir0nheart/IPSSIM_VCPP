@@ -2776,7 +2776,13 @@ void ControlParameters::BANWID(){
 	logLine.clear();
 
 }
+void ControlParameters::loadBCS(){
+	char * map = InputFileParser::Instance()->mapViewOfBCSFile;
+	char * start_str = map;
+	char * end_str;
+	int size = strlen(map);
 
+}
 void ControlParameters::loadInitialConditions(){
 	char * map = InputFileParser::Instance()->mapViewOfICSFile;
 	char * start_str = map;
@@ -4296,9 +4302,126 @@ void ControlParameters::PUP(ObservationPoints *p){
 			int nn = obsEl->getElementNodes()[i];
 			p->setP1(p->getP1() + nodeContainer[nn]->getPM() * F[i]);
 			p->setU1(p->getU1() + nodeContainer[nn]->getUM() * F[i]);
-			p->setC1(p->getC1() + nodeContainer[nn]->getCNUBM() * F[i]);
+			p->setC1(p->getC1() + nodeContainer[nn]->getCNUB() * F[i]);
 			p->setS1(p->getS1() + nodeContainer[nn]->getSWT() * F[i]);
 
 		}
 	}
+}
+
+void ControlParameters::setADSMOD(string val){ this->ADSMOD = val; }
+string ControlParameters::getADSMOD(){ return this->ADSMOD; }
+
+
+
+
+
+
+// PURPOSE
+// USER-PROGRAMMED FUNCTION WHICH ALLOWS THE USER TO SPECIFY:
+//        (1) TIME - DEPENDENT SPECIFIED PRESSURES AND TIME - DEPENDENT       
+//            CONCENTRATIONS OR TEMPERATURES OF INFLOWS AT THESE POINTS   
+//        (2) TIME - DEPENDENT SPECIFIED CONCENTRATIONS OR TEMPERATURES      
+//        (3) TIME - DEPENDENT FLUID SOURCES AND CONCENTRATIONS              
+//            OR TEMPERATURES OF INFLOWS AT THESE POINTS                   
+//        (4) TIME - DEPENDENT ENERGY OR SOLUTE MASS SOURCES                 
+void ControlParameters::BCTIME(){
+	// REQUIRED PARAMETERES:
+	//		IPBC,PBC,IUBC,UBC,QIN,UIN,QUIN,IQSOP,IQSOU,IPBCT, IUBCT, IQSOPT, IQSOUT, X, Y, Z, IBCPBC, IBCUBC, IBCSOP, IBCSOU
+	// DEFINITION OF REQUIRED PARAMETERS
+	// NN : EXACT NUMBER OF NODES IN MESH
+	// NPBC = EXACT NUMBER OF SPECIFIED PRESSURE NODES
+	// NUBC = EXACT NUMBER OF SPECIFIED CONCENTRATION
+	// IT = NUMBER OF CURRENT TIME STEP 
+	//  TSEC = TIME AT END OF CURRENT TIME STEP IN SECONDS  
+	// TMIN = TIME AT END OF CURRENT TIME STEP IN MINUTES         
+	// THOUR = TIME AT END OF CURRENT TIME STEP IN HOURS                
+	// TDAY = TIME AT END OF CURRENT TIME STEP IN DAYS                   
+	// TWEEK = TIME AT END OF CURRENT TIME STEP IN WEEKS             
+	// TMONTH = TIME AT END OF CURRENT TIME STEP IN MONTHS             
+	// TYEAR = TIME AT END OF CURRENT TIME STEP IN YEARS            
+
+	//	PBC = SPECIFIED PRESSURE VALUE AT SPECIFIED PRESSURE NODE
+	//	UBC= SPECIFIED CONCENTRATION VALUE OF ANY INFLOW OCCURRING AT SPECIFIED PRESSURE NODE
+	//	IPBC = ACTUAL NODE NUMBER OF SPECIFIED PRESSURE NODE { WHEN NODE NUMBER I = IPBC(IP) IS NEGATIVE(I<0), VALUES MUST BE SPECIFIED FOR PBC AND UBC. }
+	//	IBCPBC= INDICATOR OF WHERE THIS PRESSURE SPECIFICATION WAS MADE.MUST BE SET TO - 1 TO INDICATE THAT THIS SPECIFICATION WAS MADE IN SUBROUTINE BCTIME.
+
+	// UBC(IUP) = SPECIFIED CONCENTRATION VALUE AT SPECIFIED CONCENTRATION NODE (WHERE IUP = IU + NPBC)
+	// IUBC(IUP) = ACTUAL NODE NUMBER OF IU(TH) SPECIFIED CONCENTRATION NODE(WHERE IUP = IU + NPBC){ WHEN NODE NUMBER I = IUBC(IU) IS NEGATIVE(I<0),A VALUE MUST BE SPECIFIED FOR UBC. }
+	// IBCUBC(IUP) = INDICATOR OF WHERE THIS CONCENTRATION SPECIFICATION WAS MADE.MUST BE SET TO - 1 TO INDICATE THAT THIS SPECIFICATION WAS MADE IN SUBROUTINE BCTIME.
+
+
+	// IQSOP(IQP) = NODE NUMBER OF IQP(TH) FLUID SOURCE NODE. { WHEN NODE NUMBER I = IQSOP(IQP) IS NEGATIVE(I<0), VALUES MUST BE SPECIFIED FOR QIN AND UIN. }
+	// QIN(-I) = SPECIFIED FLUID SOURCE VALUE AT NODE(-I)               
+	// UIN(-I) = SPECIFIED CONCENTRATION VALUE OF ANY INFLOW OCCURRING AT FLUID SOURCE NODE(-I)              
+	// IBCSOP(IQP) = INDICATOR OF WHERE THIS FLUID SOURCE SPECIFICATION WAS MADE.MUST BE SET TO - 1 TO INDICATE THAT THIS SPECIFICATION WAS MADE IN SUBROUTINE BCTIME.
+
+
+	// IQSOU(IQU) = NODE NUMBER OF IQU(TH) SOLUTE MASS SOURCE NODE { WHEN NODE NUMBER I = IQSOU(IQU) IS NEGATIVE(I<0), A VALUE MUST BE SPECIFIED FOR QUIN. }  
+	// QUIN(-I) = SPECIFIED ENERGY OR SOLUTE MASS SOURCE VALUE AT NODE(-I)                                          
+	// IBCSOU(IQU) = INDICATOR OF WHERE THIS ENERGY OR SOLUTE MASS SOURCE SPECIFICATION WAS MADE.MUST BE SET TO - 1 TO INDICATE THAT THIS SPECIFICATION WAS MADE IN SUBROUTINE BCTIME.
+
+	//NSOPI IS ACTUAL NUMBER OF FLUID SOURCE NODES
+	NSOPI = NSOP - 1;
+	//NSOUI IS ACTUAL NUMBER OF SOLUTE MASS SOURCE NODES 
+	NSOUI = NSOU - 1;
+
+	if (IPBCT < 0){
+		// SET TIME-DEPENDENT SPECIFIED PRESSURES OR CONCENTRATIONS OF INFLOWS AT SPECIFIED PRESSURE NODES
+		for (int nn : IPBC){
+			if (nn < 0){
+				nodeContainer[abs(nn)]->setIBCPBC(-1);
+			}
+			else{
+				continue;
+			}
+
+		}
+	}
+
+	if (IPBCT >= 0){
+		if (IUBCT < 0){
+			// SET TIME - DEPENDENT SPECIFIED CONCENTRATIONS
+			for (int nn : IUBC){
+				if (nn < 0){
+					nodeContainer[abs(nn)]->setIBCUBC(-1);
+				}
+				else{
+					continue;
+				}
+			}
+		}
+		else{
+			if (IQSOPT < 0){
+				for (int nn : IQSOP){
+					if (nn < 0){
+						nodeContainer[abs(nn)]->setIBCSOP(-1);
+					}
+					else{
+						continue;
+					}
+				}
+			}
+			else{
+				if (IQSOUT < 0){
+					for (int nn : IQSOU){
+						if (nn < 0){
+							nodeContainer[abs(nn)]->setIBCSOU(-1);
+						}
+						else{
+							continue;
+						}
+					}
+				}
+			}
+
+
+		}
+	}
+}
+
+void ControlParameters::setOnceBCS(bool val){ this->onceBCS = val; }
+bool ControlParameters::getOnceBCS(){ return this->onceBCS; }
+
+void ControlParameters::BCSTEP(){
 }

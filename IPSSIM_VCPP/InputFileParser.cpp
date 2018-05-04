@@ -351,3 +351,44 @@ void InputFileParser::mapToMemoryICS(InputFiles* inputFiles){
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 10);
 	cout << "\t Successfully mapped initial conditions file." << endl;
 }
+void InputFileParser::mapToMemoryBCS(InputFiles* inputFiles){
+	string inpFile;
+	inpFile.append(inputFiles->getInputDirectory());
+	inpFile.append(inputFiles->filesToRead["BCS"]);
+
+	int ssize = inpFile.length();
+	TCHAR *param = new TCHAR[ssize + 1];
+	param[ssize] = 0;
+	copy(inpFile.begin(), inpFile.end(), param);
+	HANDLE hMapFile;
+	HANDLE hFile;
+	hFile = CreateFile(param,               // file to open
+		GENERIC_READ | GENERIC_WRITE,          // open for reading
+		FILE_SHARE_READ,       // share for reading
+		NULL,                  // default security
+		OPEN_EXISTING,         // existing file only
+		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, // normal file
+		NULL);                 // no attr. template
+
+
+	if (hFile == INVALID_HANDLE_VALUE)
+	{
+
+		_tprintf(TEXT("\t Terminal failure: unable to open file \"%s\" for read.\n"), param);
+		return;
+	}
+	hMapFile = CreateFileMapping(hFile, NULL, PAGE_READWRITE, 0, 0, NULL);
+	if (hMapFile == NULL)
+	{
+		_tprintf(TEXT("\t Could not create file mapping object (%d).\n"),
+			GetLastError());
+
+	}
+	mapViewOfBCSFile = (char*)MapViewOfFile(hMapFile,   // handle to map object
+		FILE_MAP_ALL_ACCESS, // read/write permission
+		0,
+		0,
+		0);
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 10);
+	cout << "\t Successfully mapped input file." << endl;
+}

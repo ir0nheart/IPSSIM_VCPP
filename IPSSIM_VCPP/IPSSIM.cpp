@@ -233,11 +233,6 @@ void main(){
 	cout << "\t Finding Observation Points " << t << " seconds" << endl;
 	Miscellaneous::spacer();
 
-	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_RED);
-	for (ObservationPoints * p : controlParameters->getObservationPointsContainer()){
-		cout << "OBS : " << p->getOBSNAM() << " Element : " << p->getObsElement() << endl;
-	}
-
 	if (UnmapViewOfFile(inputParser->mapViewOfINPFile))
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_RED);
 	cout << "Unmapped Memory view of File " << endl;
@@ -262,7 +257,10 @@ void main(){
 	controlParameters->BANWID();
 
 	// Read BCS Files Here
-
+	if (inputFiles->getBcsDef()){
+		inputParser->mapToMemoryBCS(inputFiles);
+		controlParameters->loadBCS();
+	}
 
 
 
@@ -276,7 +274,10 @@ void main(){
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
 	cout << "\t Initial Conditions are loaded." << endl;
 
-
+	if (UnmapViewOfFile(inputParser->mapViewOfINPFile)){
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_RED);
+		cout << "Unmapped Memory view of ICS File " << endl;
+	}
 
 	t.reset();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
@@ -493,13 +494,123 @@ BEGINITERATION:
 			node->setUITER(node->getUVEC());
 			node->setRCITM1(node->getRCIT());
 			node->setRCIT(controlParameters->getRHOW0() + controlParameters->getDRWDU()*(node->getUITER() - controlParameters->getURHOW0()));
-	
+		}
+
+		/// CALL BC
+
+		if (controlParameters->getITER() <= 2){
+			for (int i = 1; i <= controlParameters->getNN(); i++){
+				Node * node = controlParameters->getNodeContainer()[i];
+				node->setQINITR(node->getQIN());
+			}
+		}
+		if (controlParameters->getITER() > 1)
+			goto LEND;
+
+		for (int i = 1; i <= controlParameters->getNN(); i++){
+			Node * node = controlParameters->getNodeContainer()[i];
+			node->setPITER(controlParameters->getBDELP1()*node->getPVEC() - controlParameters->getBDELP()*node->getPM1());
+			node->setUITER(controlParameters->getBDELU1()*node->getUVEC() - controlParameters->getBDELU()*node->getUM1());
+			node->setDPDTITR((node->getPVEC() - node->getPM1()) / controlParameters->getDLTPM1());
+			node->setPM1(node->getPVEC());
+			node->setUM2(node->getUM1());
+			node->setUM1(node->getUVEC());
+		}
+		goto LEND;
+
+
+		LEND:
+	}
+
+	if (controlParameters->getML() == 0){
+		for (int i = 1; i <= controlParameters->getNN(); i++){
+			Node * node = controlParameters->getNodeContainer()[i];
+			node->setPITER(controlParameters->getBDELP1()*node->getPVEC() - controlParameters->getBDELP()*node->getPM1());
+			node->setUITER(controlParameters->getBDELU1()*node->getUVEC() - controlParameters->getBDELU()*node->getUM1());
+			node->setRCITM1(node->getRCIT());
+			node->setRCIT(controlParameters->getRHOW0() + controlParameters->getDRWDU()*(node->getUITER() - controlParameters->getURHOW0()));
+			node->setPM1(node->getPVEC());
 		}
 	}
 
+	if (controlParameters->getML() > 0){
+		if (controlParameters->getITER() == 1){
+			for (int i = 1; i <= controlParameters->getNN(); i++){
+				Node * node = controlParameters->getNodeContainer()[i];
+				node->setUITER(controlParameters->getBDELU1()*node->getUVEC() - controlParameters->getBDELU()*node->getUM1());
+			}
+		}
+		else{
+			for (int i = 1; i <= controlParameters->getNN(); i++){
+				Node * node = controlParameters->getNodeContainer()[i];
+				node->setUITER(node->getUVEC());
+			}
+
+		}
+
+		if (controlParameters->getNOUMAT() == 1)
+			goto FHE;
+		if (controlParameters->getITER() > 1)
+			goto SH;
+		for (int i = 1; i <= controlParameters->getNN(); i++){
+			Node * node = controlParameters->getNodeContainer()[i];
+			node->setDPDTITR((node->getPVEC() - node->getPM1()) / controlParameters->getDELTP());
+			node->setQINITR(node->getQIN());
+			node->setPITER(node->getPVEC());
+			node->setPVEL(node->getPVEC());
+			node->setRCITM1(node->getRCIT());
+		}
+
+		// CALL BC
+		
+	FHE:
+		for (int i = 1; i <= controlParameters->getNN(); i++){
+			Node * node = controlParameters->getNodeContainer()[i];
+			node->setUM2(node->getUM1());
+			node->setUM1(node->getUVEC());
+			node->setCNUBM1(node->getCNUB());
+		}
+
+		SH:
+	}
 
 
+	//C.....INITIALIZE ARRAYS WITH VALUE OF ZERO                               SUTRA........42100
+	//	MATDIM = NELT*NCBI                                                   SUTRA........42200
+	//	IF(ML - 1) 3000, 3000, 3300                                            SUTRA........42300
+	//	3000 CALL ZERO(PMAT, MATDIM, 0.0D0)                                       SUTRA........42400
+	//	CALL ZERO(PVEC, NNVEC, 0.0D0)                                        SUTRA........42500                                                            !CNUB initial zero added here.!!!
+	//	CALL ZERO(VOL, NN, 0.0D0)                                            SUTRA........42600
+	//	IF(ML - 1) 3300, 3400, 3300                                            SUTRA........42700
+	//	3300 IF(NOUMAT) 3350, 3350, 3375                                          SUTRA........42800
+	//	3350 CALL ZERO(UMAT, MATDIM, 0.0D0)                                       SUTRA........42900
+	//	3375 CALL ZERO(UVEC, NNVEC, 0.0D0)                                        SUTRA........43000
+	//	ccc      CALL ZERO(CNUB, NN, 0.0D0)                                          !alden 110111 commented out
+	//	3400 CONTINUE                                                           SUTRA........43100
 
+
+	if (controlParameters->getITER() == 1 && controlParameters->getIBCT() != 4)
+		controlParameters->BCTIME();
+
+	if (controlParameters->getITER() == 1 && inputFiles->getBcsDef())
+		controlParameters->BCSTEP();
+
+	if ((controlParameters->getML() != 1) && (controlParameters->getME() == -1) && (controlParameters->getNOUMAT() == 0) && (controlParameters->getADSMOD() != "'NONE'"))
+		controlParameters->ADSORB();
+
+
+	if (controlParameters->getNOUMAT() == 0){
+		if (controlParameters->getKTYPE(0) == 3){
+			controlParameters->ELEMN3();
+		}
+		else{
+			controlParameters->ELEMN2();
+		}
+		
+	}
+
+	controlParameters->NODAL();
+	controlParameters->BC();
 
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << " Total Passed time " << gent << " seconds" << endl;

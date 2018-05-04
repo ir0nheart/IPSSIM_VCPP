@@ -66,12 +66,18 @@ void Node::setLayer(Layer * lay, int layN){
 	this->layer = lay;
 	this->layerN = layN;
 }
+void Node::setIBCPBC(int val){ this->IBCPBC = val; }
+void Node::setIBCUBC(int val){ this->IBCUBC = val; }
+void Node::setIBCSOP(int val){ this->IBCSOP = val; }
+void Node::setIBCSOU(int val){ this->IBCSOU = val; }
 void Node::setCNUB(double val){ this->CNUB = val; }
+void Node::setCNUBM1(double val){ this->CNUBM1 = val; }
 void Node::setPM(double val){ this->PM = val; }
 void Node::setUM(double val){ this->UM = val; }
-void Node::setCNUBM(double val){ this->CNUBM = val; }
+void Node::setCNUB(double val){ this->CNUB = val; }
 void Node::setPM1(double val){ this->PM1 = val; }
 void Node::setUM1(double val){ this->UM1 = val; }
+void Node::setUM2(double val){ this->UM2 = val; }
 void Node::setPITER(double val){ this->PITER = val; }
 void Node::setUITER(double val){ this->UITER = val; }
 void Node::setRCIT(double val){ this->RCIT = val; }
@@ -81,8 +87,13 @@ void Node::setPVEL(double val){ this->PVEL = val; }
 void Node::setGNUU1(double val){ this->GNUU1 = val; }
 void Node::setGNUP1(double val){ this->GNUP1 = val; }
 void Node::setQPLITR(double val){ this->QPLITR = val; }
+void Node::setQINITR(double val) { this->QINITR = val; }
 
 // Getters
+int Node::getIBCPBC(){ return this->IBCPBC; }
+int Node::getIBCUBC(){ return this->IBCUBC; }
+int Node::getIBCSOP(){ return this->IBCSOP; }
+int Node::getIBCSOU(){ return this->IBCSOU; }
 int Node::getNodeNumber(){ return this->NodeNumber; }
 int Node::getNREG(){ return this->NREG;}
 double Node::getXCoord(){ return this->XCoord; }
@@ -108,10 +119,11 @@ double Node::getTOTSTR(){ return this->TOTSTR; }
 double Node::getCNUB(){ return this->CNUB; }
 double Node::getPM(){ return this->PM; }
 double Node::getUM(){ return this->UM; }
-double Node::getCNUBM(){ return this->CNUBM; }
-
+double Node::getCNUB(){ return this->CNUB; }
+double Node::getCNUBM1(){ return this->CNUBM1; }
 double Node::getPM1(){ return this->PM1; }
 double Node::getUM1(){ return this->UM1; }
+double Node::getUM2(){ return this->UM2; }
 double Node::getPITER(){ return this->PITER; }
 double Node::getUITER(){ return this->UITER; }
 double Node::getRCIT(){ return this->RCIT; }
@@ -121,3 +133,4 @@ double Node::getPVEL(){ return this->PVEL; }
 double Node::getGNUU1(){ return this->GNUU1; }
 double Node::getGNUP1(){ return this->GNUP1; }
 double Node::getQPLITR(){ return this->QPLITR; }
+double Node::getQINITR(){ return this->QINITR; }

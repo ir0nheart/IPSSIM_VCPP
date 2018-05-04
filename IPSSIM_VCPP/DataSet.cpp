@@ -1496,6 +1496,7 @@ void DataSet::parseDataSet_8E_9_10_11(){
 	line = lines[3];
 	dataPos.clear();
 	boost::split(dataPos, line, boost::is_any_of(" ,\r"), boost::token_compress_on);
+	CP->setADSMOD(dataPos.at(0));
 	if (dataPos.at(0) == "'NONE'"){
 		logLine.append("\n\n\n\n\n           A D S O R P T I O N   P A R A M E T E R S\n\n");
 		logLine.append("                NON-SORBING SOLUTE");

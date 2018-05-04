@@ -71,12 +71,14 @@ public:
 	double getCNUB();
 	void setPM(double val);
 	void setUM(double val);
-	void setCNUBM(double val);
+	void setCNUB(double val);
+	void setCNUBM1(double val);
 	double getPM();
 	double getUM();
-	double getCNUBM();
+	double getCNUB();
 	void setPM1(double val);
 	void setUM1(double val);
+	void setUM2(double val);
 	void setPITER(double val);
 	void setUITER(double val);
 	void setRCIT(double val);
@@ -85,6 +87,7 @@ public:
 	void setPVEL(double val);
 	double getPM1();
 	double getUM1();
+	double getUM2();
 	double getPITER();
 	double getUITER();
 	double getRCIT();
@@ -94,9 +97,20 @@ public:
 	void setGNUP1(double val);
 	void setGNUU1(double val);
 	void setQPLITR(double val);
+	void setQINITR(double val);
 	double getGNUP1();
 	double getGNUU1();
 	double getQPLITR();
+	double getQINITR();
+	double getCNUBM1();
+	int getIBCPBC();
+	int getIBCUBC();
+	int getIBCSOP();
+	int getIBCSOU();
+	void setIBCPBC(int val);
+	void setIBCUBC(int val);
+	void setIBCSOP(int val);
+	void setIBCSOU(int val);
 private: 
 	Layer * layer;
 	int layerN;
@@ -121,7 +135,7 @@ private:
 	double TOTSTR;
 	double POREP;
 	double CNUB;
-	double PM, UM, CNUBM;
+	double PM, UM, CNUB;
 	double DPDTITR;
 	double PM1;
 	double PITER;
@@ -130,7 +144,9 @@ private:
 	double RCITM1;
 	double RCIT;
 	double UM1;
-	double GNUU1, GNUP1, QPLITR;
+	double UM2;
+	double GNUU1, GNUP1, QPLITR,QINITR,CNUBM1;
+	int IBCPBC,IBCUBC,IBCSOP,IBCSOU;
 };
 
 #endif

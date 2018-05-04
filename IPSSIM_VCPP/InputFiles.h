@@ -19,6 +19,8 @@ public:
 	void checkInputFiles();
 	void readPropsINP();
 	void printInputFilesToLST();
+	bool getBcsDef();
+	void setBcsDef(bool val);
 
 private:
 	InputFiles();
@@ -28,5 +30,6 @@ private:
 	static InputFiles* m_pInstance;
 	string inputDir;
 	unordered_map<string, string> inputFileList;
+	bool bcsDef = false;
 };
 

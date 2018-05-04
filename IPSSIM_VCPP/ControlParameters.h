@@ -203,7 +203,9 @@ public:
 	void setNPBC(int val);
 	void setNUBC(int val);
 	void setNSOP(int val);
+	void setNSOPI(int val);
 	void setNSOU(int val);
+	void setNSOUI(int val);
 	void setNOBS(int val);
 	void setITRMAX(int val);
 	void setRPMAX(double val);
@@ -231,7 +233,9 @@ public:
 	int getNPBC();
 	int getNUBC();
 	int getNSOP();
+	int getNSOPI();
 	int getNSOU();
+	int getNSOUI();
 	int getNOBS();
 	string getMSHSTR();
 	int getKTYPE(int i);
@@ -314,7 +318,8 @@ public:
 	vector<string> getLCOL();
 	vector<ObservationPoints *> getObservationPointsContainer();
 	string getVERN();
-
+	string getADSMOD();
+	void setADSMOD(string val);
 	void setNBCFPR(int val);
 	void setNBCSPR(int val);
 	void setNBCPPR(int val);
@@ -327,7 +332,8 @@ public:
 	string getCINACT();
 	void setKINACT(int val);
 	int getKINACT();
-
+	void BCTIME();
+	void BCSTEP();
 	void setCOMPFL(double val);
 	void setCW(double val);
 	void setSIGMAW(double val);
@@ -499,6 +505,9 @@ public:
 	double getDELTLC();
 	double getTELAPS();
 	void setTELAPS(double val);
+	void setOnceBCS(bool val);
+	bool getOnceBCS();
+	void loadBCS();
 private:
 	double DELTLC, RELCHG,TELAPS;
 	int NOUMAT;
@@ -507,6 +516,7 @@ private:
 	bool onceNOD = false;
 	bool onceOBS = false;
 	bool onceP = false;
+	bool onceBCS = false;
 	int  ITBCS;
 	int IQSOPT, IQSOUT, IPBCT, IUBCT,IBCT;
 	int NBCFPR, NBCSPR, NBCPPR, NBCUPR;
@@ -628,7 +638,7 @@ private:
 	double PRODS1 = 0; // for solute transport : rate of first-order production of solute mass in the immobile phase ( equals zero for energy transport)
 	double PRODF0 = 0; // for energy transport - zero-order rate of energy production in fluid
 	// for solute transport - zero-order rate of solute mass production in fluid
-
+	string ADSMOD;
 
 	double PRODS0 = 0; // for energy transport : zero-order rate of energy production in the immobile phase 
 	// for solute transport : zero-order rate of adsorbate mass production in the immobile phase 
@@ -641,7 +651,7 @@ private:
 	// PBC and UBC are in node object
 
 	//---- FLOW Data -- SPECIFIED FLOWS and FLUID SOURCES ---- //
-	int NSOP; // number of nodes at which a source of fluid mass is specified
+	int NSOP,NSOPI; // number of nodes at which a source of fluid mass is specified
 	vector<int> IQSOP; // node number at which a fluid source is specified (for all NPBC nodes)
 	// QUINC, UINC are in node object
 
@@ -651,7 +661,7 @@ private:
 	// UBC is in node object
 
 	//---- ENERGY OR SOLUTE Data -- DIFFUSIVE FLUXES OF ENERGY or SOLUTE MASS AT BOUNDARIES ---- //
-	int NSOU; // number of nodes at which a diffusive energy or solute mass flux(source) is specified
+	int NSOU,NSOUI; // number of nodes at which a diffusive energy or solute mass flux(source) is specified
 	vector<int> IQSOU; // node number at which a flux(source) is specified
 	// QUINC is in node object
 

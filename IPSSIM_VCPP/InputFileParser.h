@@ -18,6 +18,8 @@ public:
 	char* mapViewOfINPFile;
 	void mapToMemoryICS(InputFiles* inputFiles);
 	char* mapViewOfICSFile;
+	void mapToMemoryBCS(InputFiles* inputFiles);
+	char* mapViewOfBCSFile;
 	void parseLinesFromMap(vector<DataSet *> dataSetContainer);
 	void findDataSetPositionsInMap();
 	void findLinesStartWithDiez();

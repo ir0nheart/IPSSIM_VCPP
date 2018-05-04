@@ -162,6 +162,7 @@ void InputFiles::getFileList()
 
 	}
 	else{
+		bcsDef = false;
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_RED);
 		cout << "WARNING !!" << endl;
 		cout << "BCS input file for Boundary Conditions is not defined in SUTRA.FIL file." << endl;
@@ -395,3 +396,6 @@ void InputFiles::readPropsINP(){
 	
 
 }
+
+void InputFiles::setBcsDef(bool val){ this->bcsDef = val; }
+bool InputFiles::getBcsDef(){ return this->bcsDef; }
