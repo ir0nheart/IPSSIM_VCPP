@@ -22,6 +22,9 @@
 #include "Element.h"
 #include <math.h>
 #include <unordered_map>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/range/algorithm/remove_if.hpp>
 #include <deque>
 #include <process.h>
 #include "Timer.h"
@@ -91,7 +94,8 @@ public:
 	
 	void findObservationElement(int b, int e,int tid);
 	void setElementParametersThread();
-	
+	void SOURCE1(string BCSID);
+	void BOUND1(string BCSID);
 	void loadInitialConditions();
 
 	void findObservationElementThread();
@@ -567,7 +571,7 @@ private:
 	string sTransport = "";
 	string TITLE1, TITLE2;
 	int ME; // set ME = -1 for solute transport set ME = +1 for energy Transport
-
+	string BCSSCH;
 	int KSOLVP;
 	int KSOLVU;
 	int ITOLU;
@@ -789,7 +793,13 @@ private:
 	bool * BCSTR;
 	int ML;
 	double DLTPM1, DLTUM1, BDELP1, BDELP, BDELU, BDELU1;
+	Schedule * BCSSchedule = nullptr;
+	bool setBCS = false;
+	int NCID;
 
+	int NBCN1, NSOPI1, NSOUI1;
+	bool USEFL, ANYFL, ANYTR, SETFL, SETTR;
+	vector<string>CIDBCS;
 
 };
 #endif

@@ -390,5 +390,5 @@ void InputFileParser::mapToMemoryBCS(InputFiles* inputFiles){
 		0,
 		0);
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 10);
-	cout << "\t Successfully mapped input file." << endl;
+	cout << "\t Successfully mapped BCS file." << endl;
 }

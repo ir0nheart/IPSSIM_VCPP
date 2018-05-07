@@ -109,6 +109,18 @@ public:
 	void setIBCUBC(int val);
 	void setIBCSOP(int val);
 	void setIBCSOU(int val);
+
+	void setPBCDef(bool val);
+	void setUBCDef(bool val);
+	void setQINDef(bool val);
+	void setUINDef(bool val);
+	void setQUINDef(bool val);
+	bool getPBCDef();
+	bool getUBCDef();
+	bool getQINDef();
+	bool getUINDef();
+	bool getQUINDef();
+	
 private: 
 	Layer * layer;
 	int layerN;
@@ -145,6 +157,7 @@ private:
 	double UM2;
 	double GNUU1, GNUP1, QPLITR,QINITR,CNUBM1;
 	int IBCPBC,IBCUBC,IBCSOP,IBCSOU;
+	bool PBCDef, UBCDef, QINDef, UINDef, QUINDef;
 };
 
 #endif

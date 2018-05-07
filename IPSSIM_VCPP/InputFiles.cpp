@@ -158,6 +158,7 @@ void InputFiles::getFileList()
 
 	if (!bcsfilename.empty()){
 		filesToRead["BCS"] = bcsfilename;
+		bcsDef = true;
 		
 
 	}

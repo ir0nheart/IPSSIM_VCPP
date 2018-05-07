@@ -132,3 +132,14 @@ double Node::getGNUU1(){ return this->GNUU1; }
 double Node::getGNUP1(){ return this->GNUP1; }
 double Node::getQPLITR(){ return this->QPLITR; }
 double Node::getQINITR(){ return this->QINITR; }
+
+void Node::setPBCDef(bool val){ this->PBCDef = val; }
+void Node::setUBCDef(bool val){ this->UBCDef = val; }
+void Node::setQINDef(bool val){ this->QINDef = val; }
+void Node::setUINDef(bool val){ this->UINDef = val; }
+void Node::setQUINDef(bool val){ this->QUINDef = val; }
+bool Node::getPBCDef(){ return this->PBCDef; }
+bool Node::getUBCDef(){ return this->UBCDef; }
+bool Node::getQINDef(){ return this->QINDef; }
+bool Node::getUINDef(){ return this->UINDef; }
+bool Node::getQUINDef(){ return this->QUINDef; }

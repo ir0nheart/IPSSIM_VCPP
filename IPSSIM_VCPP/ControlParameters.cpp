@@ -882,6 +882,8 @@ void ControlParameters::Source(string key){
 					int nn = abs(IQCP);
 					nodeQIN[nn] = QINC;
 					nodeUIN[nn] = UINC;
+					nodeContainer[nn]->setQINDef(true);
+					nodeContainer[nn]->setUINDef(true);
 				
 					if (IQCP > 0){
 						if (QINC > 0){
@@ -953,6 +955,7 @@ void ControlParameters::Source(string key){
 					IQSOU.push_back(IQCU);
 					int nn = abs(IQCU);
 					nodeQUIN[nn] = QUINC;
+					nodeContainer[nn]->setQUINDef(true);
 				
 
 					if (IQCU > 0){
@@ -1149,6 +1152,8 @@ void ControlParameters::Bound(string key){
 						//aNode = nodeContainer[IDUM];
 						nodePBC[IDUMA] = stod(strtok(lineBuffer.data(), del));
 						nodeUBC[IDUMA] = stod(strtok(lineBuffer.data(), del));
+						nodeContainer[IDUMA]->setPBCDef(true);
+						nodeContainer[IDUMA]->setUBCDef(true);
 						_snprintf(buff, sizeof(buff), "       %9d      %+20.13e      %+20.13e\n", IDUMA, nodePBC[IDUMA], nodeUBC[IDUMA]);
 						logLine.append(buff);
 						IPU++;
@@ -1219,6 +1224,7 @@ void ControlParameters::Bound(string key){
 					if (IDUM > 0){
 						
 						nodeUBC[IDUMA]= stod(strtok(lineBuffer.data(), del));
+						nodeContainer[IDUMA]->setUBCDef(true);
 						_snprintf(buff, sizeof(buff), "       %9d      %+20.13e\n", IDUMA, nodeUBC[IDUMA]);
 						logLine.append(buff);
 
@@ -2781,10 +2787,40 @@ void ControlParameters::loadBCS(){
 	char * start_str = map;
 	char * end_str;
 	int size = strlen(map);
+	vector<char>lineBuffer;
+	vector<string>lines;
+	const char* del = " ";
+	const char* diez = "#";
+	// Lets put all lines into vector;
+	for (int i = 0; i < size; i++){
+		if (map[i] == '\n'){
+			end_str = map + i;
+			lineBuffer.assign(start_str, end_str);
+			lineBuffer.push_back('\0');
+			lines.push_back(string(start_str, end_str));
+			start_str = map + i + 1;
+			
+		}
+	}	
+	// First Line definition Schedule Name, thus omit this line
+	// Second Line actual schedule Name Parameters
+	BCSSCH = lines[1].substr(0, lines[1].find_last_of('\'')+1);
+	BCSSCH.erase(boost::remove_if(BCSSCH,boost::is_any_of("'") ), BCSSCH.end());
+	
 
+	for (Schedule * sch : listOfSchedules){
+		if (sch->getScheduleName() == BCSSCH){
+			BCSSchedule = sch;
+			break;
+		}
+	}
 
+	if (BCSSchedule == nullptr){
+		exitOnError("BCS-1-1");
+	}
 
-
+	setBCS = false;
+	BCSTEP();
 }
 void ControlParameters::loadInitialConditions(){
 	char * map = InputFileParser::Instance()->mapViewOfICSFile;
@@ -4427,6 +4463,95 @@ void ControlParameters::setOnceBCS(bool val){ this->onceBCS = val; }
 bool ControlParameters::getOnceBCS(){ return this->onceBCS; }
 
 void ControlParameters::BCSTEP(){
+
+	char * map = InputFileParser::Instance()->mapViewOfBCSFile;
+	char * start_str = map;
+	char * end_str;
+	int size = strlen(map);
+	vector<char>lineBuffer;
+	vector<string>lines;
+	vector<string>dataPos;
+	const char* del = " ";
+	const char* diez = "#";
+	// Lets put all lines into vector;
+	for (int i = 0; i < size; i++){
+		if (map[i] == '\n'){
+			end_str = map + i;
+			lineBuffer.assign(start_str, end_str);
+			lineBuffer.push_back('\0');
+			lines.push_back(string(start_str, end_str));
+			start_str = map + i + 1;
+
+		}
+	}
+
+	if (ITBCS != 0){
+		BCSFL[ITBCS] = false;
+		BCSTR[ITBCS] = false;
+	}
+
+	if (!((ISSTRA != 0) && (ITBCS == 1)))
+		NCID = 0;
+
+	for (pair<double, double>p : BCSSchedule->getSList()){
+		int ITNBCS = (int)p.second;
+		string BCSID;
+		int NSOP1, NSOU1, NPBC1, NUBC1;
+		NSOP1 = NSOU1 = NPBC1 = NUBC1 = 0;
+		boost::split(dataPos, lines[6], boost::is_any_of("  "), boost::token_compress_on);
+		BCSID = dataPos[0];
+		NSOP1 = stoi(dataPos[1]);
+		NSOU1 = stoi(dataPos[2]);
+		NPBC1 = stoi(dataPos[3]);
+		NUBC1 = stoi(dataPos[4]);
+
+		NBCN1 = NPBC1 + NUBC1 +1;
+		NSOP1 = NSOP1 + 1;
+		NSOU1 = NSOU1 + 1;
+
+		NSOPI = NSOP - 1;
+		NSOUI = NSOU - 1;
+
+		NSOPI1 = NSOP1 - 1;
+		NSOUI1 = NSOU1 - 1;
+
+		USEFL = ((ISSFLO != 0) && (ITBCS == 0)) || ((ISSFLO == 0) && (ITBCS != 0));
+		ANYFL = (NSOPI1 + NPBC1) > 0;
+		ANYTR = (NSOUI1 + NUBC1) > 0;
+		BCSFL[ITBCS] = USEFL && ANYFL;
+		BCSTR[ITBCS] = ANYTR;
+		SETFL = setBCS && BCSFL[ITBCS];
+		SETTR = setBCS && BCSTR[ITBCS];
+
+		if (BCSFL[ITBCS] || BCSTR[ITBCS]){
+			NCID = NCID + 1;
+			if (setBCS)
+				CIDBCS.push_back(BCSID);
+		}
+		/*USEFL = ((ISSFLO.NE.0).AND.(ITBCS.EQ.0)).OR.                       BCSTEP.......15000
+     1   ((ISSFLO.EQ.0).AND.(ITBCS.NE.0))                                BCSTEP.......15100
+      ANYFL = NSOPI1+NPBC1.GT.0                                          BCSTEP.......15200
+      ANYTR = NSOUI1+NUBC1.GT.0                                          BCSTEP.......15300
+      BCSFL(ITBCS) = USEFL.AND.ANYFL                                     BCSTEP.......15400
+      BCSTR(ITBCS) = ANYTR                                               BCSTEP.......15500
+      SETFL = SETBCS.AND.BCSFL(ITBCS)                                    BCSTEP.......15600
+      SETTR = SETBCS.AND.BCSTR(ITBCS)                                    BCSTEP.......15700
+      IF (BCSFL(ITBCS).OR.BCSTR(ITBCS)) THEN                             BCSTEP.......15800
+         NCID = NCID + 1                                                 BCSTEP.......15900
+         IF (SETBCS) CIDBCS(NCID) = BCSID                                BCSTEP.......16000
+      END IF */
+		
+		if ((NSOPI1 + NSOUI1) == 0)
+			goto FIVEHUNDRED;
+
+		SOURCE1(BCSID);
+		FIVEHUNDRED:
+
+
+
+	}
+	//IF (.NOT.((ISSTRA.NE.0).AND.(ITBCS.EQ.1))) NCID = 0   
+
 }
 
 void ControlParameters::ELEMN3(){}
@@ -4434,3 +4559,5 @@ void ControlParameters::ELEMN2(){}
 void ControlParameters::ADSORB(){}
 void ControlParameters::NODAL(){}
 void ControlParameters::BC(){}
+void ControlParameters::SOURCE1(string BCSID){}
+void ControlParameters::BOUND1(string BCSID){}
