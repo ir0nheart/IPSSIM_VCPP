@@ -71,11 +71,9 @@ public:
 	double getCNUB();
 	void setPM(double val);
 	void setUM(double val);
-	void setCNUB(double val);
 	void setCNUBM1(double val);
 	double getPM();
 	double getUM();
-	double getCNUB();
 	void setPM1(double val);
 	void setUM1(double val);
 	void setUM2(double val);
@@ -135,7 +133,7 @@ private:
 	double TOTSTR;
 	double POREP;
 	double CNUB;
-	double PM, UM, CNUB;
+	double PM, UM;
 	double DPDTITR;
 	double PM1;
 	double PITER;

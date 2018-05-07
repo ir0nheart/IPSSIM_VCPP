@@ -508,6 +508,12 @@ public:
 	void setOnceBCS(bool val);
 	bool getOnceBCS();
 	void loadBCS();
+	void ADSORB();
+	void ELEMN3();
+	void ELEMN2();
+	void NODAL();
+	void BC();
+	
 private:
 	double DELTLC, RELCHG,TELAPS;
 	int NOUMAT;

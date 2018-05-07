@@ -70,7 +70,6 @@ void Node::setIBCPBC(int val){ this->IBCPBC = val; }
 void Node::setIBCUBC(int val){ this->IBCUBC = val; }
 void Node::setIBCSOP(int val){ this->IBCSOP = val; }
 void Node::setIBCSOU(int val){ this->IBCSOU = val; }
-void Node::setCNUB(double val){ this->CNUB = val; }
 void Node::setCNUBM1(double val){ this->CNUBM1 = val; }
 void Node::setPM(double val){ this->PM = val; }
 void Node::setUM(double val){ this->UM = val; }
@@ -119,7 +118,6 @@ double Node::getTOTSTR(){ return this->TOTSTR; }
 double Node::getCNUB(){ return this->CNUB; }
 double Node::getPM(){ return this->PM; }
 double Node::getUM(){ return this->UM; }
-double Node::getCNUB(){ return this->CNUB; }
 double Node::getCNUBM1(){ return this->CNUBM1; }
 double Node::getPM1(){ return this->PM1; }
 double Node::getUM1(){ return this->UM1; }

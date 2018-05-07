@@ -486,6 +486,7 @@ BEGINITERATION:
 	}
 
 	if (controlParameters->getML() < 0){
+
 		for (int i = 1; i <= controlParameters->getNN(); i++){
 			Node * node = controlParameters->getNodeContainer()[i];
 			node->setDPDTITR((node->getPVEC() - node->getPM1()) / controlParameters->getDELTP());
@@ -504,6 +505,7 @@ BEGINITERATION:
 				node->setQINITR(node->getQIN());
 			}
 		}
+
 		if (controlParameters->getITER() > 1)
 			goto LEND;
 
@@ -517,10 +519,10 @@ BEGINITERATION:
 			node->setUM1(node->getUVEC());
 		}
 		goto LEND;
-
+	}
 
 		LEND:
-	}
+	
 
 	if (controlParameters->getML() == 0){
 		for (int i = 1; i <= controlParameters->getNN(); i++){
@@ -571,9 +573,9 @@ BEGINITERATION:
 			node->setCNUBM1(node->getCNUB());
 		}
 
-		SH:
+		
 	}
-
+SH:
 
 	//C.....INITIALIZE ARRAYS WITH VALUE OF ZERO                               SUTRA........42100
 	//	MATDIM = NELT*NCBI                                                   SUTRA........42200

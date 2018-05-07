@@ -2782,6 +2782,9 @@ void ControlParameters::loadBCS(){
 	char * end_str;
 	int size = strlen(map);
 
+
+
+
 }
 void ControlParameters::loadInitialConditions(){
 	char * map = InputFileParser::Instance()->mapViewOfICSFile;
@@ -4425,3 +4428,9 @@ bool ControlParameters::getOnceBCS(){ return this->onceBCS; }
 
 void ControlParameters::BCSTEP(){
 }
+
+void ControlParameters::ELEMN3(){}
+void ControlParameters::ELEMN2(){}
+void ControlParameters::ADSORB(){}
+void ControlParameters::NODAL(){}
+void ControlParameters::BC(){}
