@@ -20,6 +20,7 @@
 #include "ObservationPoints.h"
 #include "Node.h"
 #include "Element.h"
+#include "BCS.h"
 #include <math.h>
 #include <unordered_map>
 #include <boost/algorithm/string/classification.hpp>
@@ -512,6 +513,7 @@ public:
 	void setOnceBCS(bool val);
 	bool getOnceBCS();
 	void loadBCS();
+	void setITERPARAMS();
 	void ADSORB();
 	void ELEMN3();
 	void ELEMN2();
@@ -800,6 +802,8 @@ private:
 	int NBCN1, NSOPI1, NSOUI1;
 	bool USEFL, ANYFL, ANYTR, SETFL, SETTR;
 	vector<string>CIDBCS;
+	vector<BCS *> bcsContainer;
+	
 
 };
 #endif

@@ -145,6 +145,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BCS.cpp" />
     <ClCompile Include="ControlParameters.cpp" />
     <ClCompile Include="DataSet.cpp" />
     <ClCompile Include="DataSetParser.cpp" />
@@ -167,6 +168,7 @@
     <ClCompile Include="Writer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BCS.h" />
     <ClInclude Include="ControlParameters.h" />
     <ClInclude Include="DataSet.h" />
     <ClInclude Include="DataSetParser.h" />

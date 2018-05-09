@@ -2819,8 +2819,119 @@ void ControlParameters::loadBCS(){
 		exitOnError("BCS-1-1");
 	}
 
-	setBCS = false;
-	BCSTEP();
+
+	// Check File and Create BCS objects
+	vector<int> timeStepPositions;
+	for (int i = 0; i < lines.size(); i++){
+		string chStr = lines[i].substr(0, 7);
+		if (chStr == "# BCSID"){
+			timeStepPositions.push_back(i + 1);
+		}	
+	}
+
+	// parse defined TS informations and create BCS and store in container
+	vector<string> data;
+	for (int j : timeStepPositions){
+		boost::split(data, lines[j], boost::is_any_of(" "), boost::token_compress_on);
+		BCS * bcs = new BCS();
+		bcs->setScheduleName(BCSSCH);
+		bcs->setBCSID(data[1]);
+		size_t n = data[1].find_first_of("0123456789");
+		string ssTs;
+		if (n != string::npos){
+			size_t m = data[1].find_first_not_of("0123456789", n);
+			ssTs = data[1].substr(n, m != string::npos ? m - n : m);
+		}
+		bcs->setTimeStep(stoi(ssTs));
+		bcs->setNumberOfQINC(stoi(data[2]));
+		bcs->setNumberOfUINC(stoi(data[3]));
+		bcs->setNumberOfPBC(stoi(data[4]));
+		bcs->setNumberOfUBC(stoi(data[5]));
+
+		bcsContainer.push_back(bcs);
+	}
+	
+	// Read Node and Condition
+	int i = 0;
+	for (int k:timeStepPositions){
+		int iNode;
+		int j = 0;
+		vector<string> bcsData;
+		do{
+			boost::split(bcsData, lines[k + 3 + j], boost::is_any_of(" \t\r\n"), boost::token_compress_off);
+			iNode = stoi(bcsData[0]);
+			if (iNode == 0)
+				break;
+			if (iNode > NN){
+				exitOnError("BCS-3-1");
+			}
+
+			if (iNode > 0){
+				bcsContainer[i]->addNode(iNode);
+				if (bcsContainer[i]->getNumberOfQINC() > 0){
+					double QINC = stod(bcsData[1]);
+					if (QINC > 0){
+						bcsContainer[i]->addQINC(QINC);
+						bcsContainer[i]->addIsQINC(true);
+						double UINC = stod(bcsData[2]);
+						bcsContainer[i]->addIsUINC(true);
+						bcsContainer[i]->addUINC(UINC);
+					}
+					else{
+						bcsContainer[i]->addQINC(QINC);
+						bcsContainer[i]->addIsQINC(true);
+						bcsContainer[i]->addIsUINC(false);
+						bcsContainer[i]->addUINC(0.0);
+					}
+				}
+
+				if (bcsContainer[i]->getNumberOfQUINC() > 0){
+					double QUINC = stod(bcsData[1]);
+					
+						bcsContainer[i]->addQINC(QUINC);
+						bcsContainer[i]->addIsQUINC(true);
+				}
+
+
+				if (bcsContainer[i]->getNumberOfPBC() > 0){
+					double PBC = stod(bcsData[1]);
+					double UBC = stod(bcsData[2]);
+
+					bcsContainer[i]->addPBC(PBC);
+					bcsContainer[i]->addIsPBC(true);
+					bcsContainer[i]->addUBC(UBC);
+					bcsContainer[i]->addIsUBC(true);
+				}
+
+				if (bcsContainer[i]->getNumberOfUBC() > 0){
+					double UBC = stod(bcsData[1]);
+					bcsContainer[i]->addUBC(UBC);
+					bcsContainer[i]->addIsUBC(true);
+				}
+
+				
+			}
+			else{
+				bcsContainer[i]->addNode(abs(iNode));
+				bcsContainer[i]->addIsPBC(false);
+				bcsContainer[i]->addIsQINC(false);
+				bcsContainer[i]->addIsQUINC(false);
+				bcsContainer[i]->addIsUBC(false);
+				bcsContainer[i]->addIsUINC(false);
+				bcsContainer[i]->addPBC(0.0);
+				bcsContainer[i]->addUBC(0.0);
+				bcsContainer[i]->addQUINC(0.0);
+				bcsContainer[i]->addQINC(0.0);
+				bcsContainer[i]->addUINC(0.0);
+			}
+			j = j + 1;
+		} while (iNode != 0);
+
+		cout << "BCS extracted for Time Step : " << bcsContainer[i]->getTimeStep() << endl;
+		i = i + 1;
+	}
+
+
 }
 void ControlParameters::loadInitialConditions(){
 	char * map = InputFileParser::Instance()->mapViewOfICSFile;
@@ -4463,94 +4574,150 @@ void ControlParameters::setOnceBCS(bool val){ this->onceBCS = val; }
 bool ControlParameters::getOnceBCS(){ return this->onceBCS; }
 
 void ControlParameters::BCSTEP(){
+	// Set Boundary Condition
 
-	char * map = InputFileParser::Instance()->mapViewOfBCSFile;
-	char * start_str = map;
-	char * end_str;
-	int size = strlen(map);
-	vector<char>lineBuffer;
-	vector<string>lines;
-	vector<string>dataPos;
-	const char* del = " ";
-	const char* diez = "#";
-	// Lets put all lines into vector;
-	for (int i = 0; i < size; i++){
-		if (map[i] == '\n'){
-			end_str = map + i;
-			lineBuffer.assign(start_str, end_str);
-			lineBuffer.push_back('\0');
-			lines.push_back(string(start_str, end_str));
-			start_str = map + i + 1;
+	BCS * bcs = nullptr;
 
+	for (BCS* tbcs : bcsContainer){
+		if (tbcs->getTimeStep() == ITBCS){
+			bcs = tbcs;
+			break;
 		}
 	}
 
-	if (ITBCS != 0){
-		BCSFL[ITBCS] = false;
-		BCSTR[ITBCS] = false;
-	}
-
-	if (!((ISSTRA != 0) && (ITBCS == 1)))
-		NCID = 0;
-
-	for (pair<double, double>p : BCSSchedule->getSList()){
-		int ITNBCS = (int)p.second;
-		string BCSID;
-		int NSOP1, NSOU1, NPBC1, NUBC1;
-		NSOP1 = NSOU1 = NPBC1 = NUBC1 = 0;
-		boost::split(dataPos, lines[6], boost::is_any_of("  "), boost::token_compress_on);
-		BCSID = dataPos[0];
-		NSOP1 = stoi(dataPos[1]);
-		NSOU1 = stoi(dataPos[2]);
-		NPBC1 = stoi(dataPos[3]);
-		NUBC1 = stoi(dataPos[4]);
-
-		NBCN1 = NPBC1 + NUBC1 +1;
-		NSOP1 = NSOP1 + 1;
-		NSOU1 = NSOU1 + 1;
-
-		NSOPI = NSOP - 1;
-		NSOUI = NSOU - 1;
-
-		NSOPI1 = NSOP1 - 1;
-		NSOUI1 = NSOU1 - 1;
+	if (bcs != nullptr){
 
 		USEFL = ((ISSFLO != 0) && (ITBCS == 0)) || ((ISSFLO == 0) && (ITBCS != 0));
-		ANYFL = (NSOPI1 + NPBC1) > 0;
-		ANYTR = (NSOUI1 + NUBC1) > 0;
+
+		ANYFL = (bcs->getNumberOfQINC() + bcs->getNumberOfPBC()) > 0;
+		ANYTR = (bcs->getNumberOfQUINC() + bcs->getNumberOfUBC()) > 0;
 		BCSFL[ITBCS] = USEFL && ANYFL;
 		BCSTR[ITBCS] = ANYTR;
 		SETFL = setBCS && BCSFL[ITBCS];
 		SETTR = setBCS && BCSTR[ITBCS];
+	
+		if ((bcs->getNumberOfQINC() + bcs->getNumberOfQUINC()) != 0){
+			if (bcs->getNumberOfQINC() > 0){
+				for (int nn = 0; nn < bcs->getNodes().size();nn++){
+					int nodeNum = abs(bcs->getNodes()[nn]);
+					bool inList = false;
+					for (int inn : IQSOP){
+						if (abs(bcs->getNodes()[nn]) == abs(inn)){
+							inList = true;
+							break;
+						}
+					}
+					if (inList == false){
+						exitOnError("BCS-3-2");
+					}
 
-		if (BCSFL[ITBCS] || BCSTR[ITBCS]){
-			NCID = NCID + 1;
-			if (setBCS)
-				CIDBCS.push_back(BCSID);
-		}
-		/*USEFL = ((ISSFLO.NE.0).AND.(ITBCS.EQ.0)).OR.                       BCSTEP.......15000
-     1   ((ISSFLO.EQ.0).AND.(ITBCS.NE.0))                                BCSTEP.......15100
-      ANYFL = NSOPI1+NPBC1.GT.0                                          BCSTEP.......15200
-      ANYTR = NSOUI1+NUBC1.GT.0                                          BCSTEP.......15300
-      BCSFL(ITBCS) = USEFL.AND.ANYFL                                     BCSTEP.......15400
-      BCSTR(ITBCS) = ANYTR                                               BCSTEP.......15500
-      SETFL = SETBCS.AND.BCSFL(ITBCS)                                    BCSTEP.......15600
-      SETTR = SETBCS.AND.BCSTR(ITBCS)                                    BCSTEP.......15700
-      IF (BCSFL(ITBCS).OR.BCSTR(ITBCS)) THEN                             BCSTEP.......15800
-         NCID = NCID + 1                                                 BCSTEP.......15900
-         IF (SETBCS) CIDBCS(NCID) = BCSID                                BCSTEP.......16000
-      END IF */
+					if (SETFL){
+						if (bcs->getNodes()[nn] > 0){
+							nodeContainer[nodeNum]->setQIN(bcs->getQINC()[nn]);
+							if (bcs->getQINC()[nn] > 0){
+								nodeContainer[nodeNum]->setUIN(bcs->getUINC()[nn]);
+							}
+						}
+						else{
+							nodeContainer[nodeNum]->setQIN(0.0);
+
+						}
+					}
+				}
+
+			}
+			if (bcs->getNumberOfQUINC() > 0){
+				for (int nn = 0; nn < bcs->getNodes().size(); nn++){
+					int nodeNum = abs(bcs->getNodes()[nn]);
+					bool inList = false;
+					for (int inn : IQSOU){
+						if (abs(bcs->getNodes()[nn]) == abs(inn)){
+							inList = true;
+							break;
+						}
+					}
+					if (inList == false){
+						exitOnError("BCS-4-2");
+					}
+
+					if (SETTR){
+						if (bcs->getNodes()[nn] > 0){
+							nodeContainer[nodeNum]->setQUIN(bcs->getQUINC()[nn]);
+							
+						}
+						else{
+							nodeContainer[nodeNum]->setQUIN(0.0);
+
+						}
+					}
+				}
+			}
+
 		
-		if ((NSOPI1 + NSOUI1) == 0)
-			goto FIVEHUNDRED;
+		}
+		if ((bcs->getNumberOfPBC() + bcs->getNumberOfUBC()) != 0){
+			if (bcs->getNumberOfPBC() > 0){
+				for (int nn = 0; nn < bcs->getNodes().size(); nn++){
+					int nodeNum = abs(bcs->getNodes()[nn]);
+					bool inList = false;
+					for (int inn : IPBC){
+						if (abs(bcs->getNodes()[nn]) == abs(inn)){
+							inList = true;
+							break;
+						}
+					}
+					if (inList == false){
+						exitOnError("BCS-5-2");
+					}
 
-		SOURCE1(BCSID);
-		FIVEHUNDRED:
+					if (SETFL){
+						if (bcs->getNodes()[nn] > 0){
+							nodeContainer[nodeNum]->setPBC(bcs->getPBC()[nn]);
+							nodeContainer[nodeNum]->setUBC(bcs->getUBC()[nn]);
+							nodeContainer[nodeNum]->setGNUP1(GNUP);
+							
+						}
+						else{
+							nodeContainer[nodeNum]->setGNUP1(0.0);
 
+						}
+					}
+				}
+			}
+			if (bcs->getNumberOfUBC() > 0){
+				for (int nn = 0; nn < bcs->getNodes().size(); nn++){
+					int nodeNum = abs(bcs->getNodes()[nn]);
+					bool inList = false;
+					for (int inn : IUBC){
+						if (abs(bcs->getNodes()[nn]) == abs(inn)){
+							inList = true;
+							break;
+						}
+					}
+					if (inList == false){
+						exitOnError("BCS-6-2");
+					}
 
+					if (SETTR){
+						if (bcs->getNodes()[nn] > 0){
+							nodeContainer[nodeNum]->setUBC(bcs->getUBC()[nn]);
+							nodeContainer[nodeNum]->setGNUU1(GNUU);
+							
+						}
+						else{
+							nodeContainer[nodeNum]->setGNUU1(0.0);
 
+						}
+					}
+				}
+
+			}
+
+		}
 	}
-	//IF (.NOT.((ISSTRA.NE.0).AND.(ITBCS.EQ.1))) NCID = 0   
+
+		
+
 
 }
 
@@ -4559,5 +4726,24 @@ void ControlParameters::ELEMN2(){}
 void ControlParameters::ADSORB(){}
 void ControlParameters::NODAL(){}
 void ControlParameters::BC(){}
-void ControlParameters::SOURCE1(string BCSID){}
+void ControlParameters::SOURCE1(string BCSID){
+	//TO READ AND ORGANIZE TIME-DEPENDENT FLUID MASS SOURCE DATA AND
+	//SOLUTE MASS SOURCE DATA SPECIFIED IN THE OPTIONAL BCS INPUT FILE.
+	//NSOPI1 IS ACTUAL NUMBER OF TIME - STEP - DEPENDENT FLUID SOURCE NODES.
+	//NSOUI1 IS ACTUAL NUMBER OF TIME-STEP-DEPENDENT SOLUTE MASS SOURCE NODES.
+
+}
 void ControlParameters::BOUND1(string BCSID){}
+
+void ControlParameters::setITERPARAMS(){
+
+	if (ML == 0){
+		for (int i = 1; i <= NN; i++){
+			nodeContainer[i]->setPITER(BDELP1*nodeContainer[i]->getPVEC() - BDELP*nodeContainer[i]->getPM1());
+			nodeContainer[i]->setUITER(BDELU1*nodeContainer[i]->getUVEC() - BDELU*nodeContainer[i]->getUM1());
+			nodeContainer[i]->setRCITM1(nodeContainer[i]->getRCIT());
+			nodeContainer[i]->setRCIT(RHOW0 + DRWDU*(nodeContainer[i]->getUITER() - URHOW0));
+			nodeContainer[i]->setPM1(nodeContainer[i]->getPVEC());
+		}
+	}
+}

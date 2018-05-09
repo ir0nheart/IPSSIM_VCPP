@@ -523,28 +523,30 @@ BEGINITERATION:
 
 		LEND:
 	
+	Node * node;
 
-	if (controlParameters->getML() == 0){
-		for (int i = 1; i <= controlParameters->getNN(); i++){
-			Node * node = controlParameters->getNodeContainer()[i];
-			node->setPITER(controlParameters->getBDELP1()*node->getPVEC() - controlParameters->getBDELP()*node->getPM1());
-			node->setUITER(controlParameters->getBDELU1()*node->getUVEC() - controlParameters->getBDELU()*node->getUM1());
-			node->setRCITM1(node->getRCIT());
-			node->setRCIT(controlParameters->getRHOW0() + controlParameters->getDRWDU()*(node->getUITER() - controlParameters->getURHOW0()));
-			node->setPM1(node->getPVEC());
-		}
-	}
+	controlParameters->setITERPARAMS();
+	//if (controlParameters->getML() == 0){
+	//	for (int i = 1; i <= controlParameters->getNN(); i++){
+	//		node = controlParameters->getNodeContainer()[i];
+	//		node->setPITER(controlParameters->getBDELP1()*node->getPVEC() - controlParameters->getBDELP()*node->getPM1());
+	//		node->setUITER(controlParameters->getBDELU1()*node->getUVEC() - controlParameters->getBDELU()*node->getUM1());
+	//		node->setRCITM1(node->getRCIT());
+	//		node->setRCIT(controlParameters->getRHOW0() + controlParameters->getDRWDU()*(node->getUITER() - controlParameters->getURHOW0()));
+	//		node->setPM1(node->getPVEC());
+	//	}
+	//}
 
 	if (controlParameters->getML() > 0){
 		if (controlParameters->getITER() == 1){
 			for (int i = 1; i <= controlParameters->getNN(); i++){
-				Node * node = controlParameters->getNodeContainer()[i];
+				node = controlParameters->getNodeContainer()[i];
 				node->setUITER(controlParameters->getBDELU1()*node->getUVEC() - controlParameters->getBDELU()*node->getUM1());
 			}
 		}
 		else{
 			for (int i = 1; i <= controlParameters->getNN(); i++){
-				Node * node = controlParameters->getNodeContainer()[i];
+				node = controlParameters->getNodeContainer()[i];
 				node->setUITER(node->getUVEC());
 			}
 
@@ -555,7 +557,7 @@ BEGINITERATION:
 		if (controlParameters->getITER() > 1)
 			goto SH;
 		for (int i = 1; i <= controlParameters->getNN(); i++){
-			Node * node = controlParameters->getNodeContainer()[i];
+			node = controlParameters->getNodeContainer()[i];
 			node->setDPDTITR((node->getPVEC() - node->getPM1()) / controlParameters->getDELTP());
 			node->setQINITR(node->getQIN());
 			node->setPITER(node->getPVEC());
@@ -567,7 +569,7 @@ BEGINITERATION:
 		
 	FHE:
 		for (int i = 1; i <= controlParameters->getNN(); i++){
-			Node * node = controlParameters->getNodeContainer()[i];
+			node = controlParameters->getNodeContainer()[i];
 			node->setUM2(node->getUM1());
 			node->setUM1(node->getUVEC());
 			node->setCNUBM1(node->getCNUB());
