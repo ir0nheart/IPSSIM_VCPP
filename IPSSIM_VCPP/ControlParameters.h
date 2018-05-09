@@ -32,6 +32,8 @@
 #include "DataSet.h"
 #include "Writer.h"
 #include <map>
+#include <iostream>
+#include "..\packages\Eigen.3.3.3\build\native\include\Eigen\Dense"
 using namespace std;
 #pragma once
 class InputFiles;
@@ -519,6 +521,7 @@ public:
 	void ELEMN2();
 	void NODAL();
 	void BC();
+	void BASIS3(int ICALL,int el, int node,int realNode, double XLOC, double YLOC, double ZLOC);
 	
 private:
 	double DELTLC, RELCHG,TELAPS;
@@ -804,6 +807,6 @@ private:
 	vector<string>CIDBCS;
 	vector<BCS *> bcsContainer;
 	
-
+	int INTIM = 0;
 };
 #endif

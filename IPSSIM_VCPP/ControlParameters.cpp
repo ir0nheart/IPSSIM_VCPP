@@ -5,10 +5,13 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>  
+#include <iostream>
 
 
 
 using namespace std;
+using namespace Eigen;
+
 mutex mtx;
 int foundObs = 0;
 
@@ -2730,6 +2733,9 @@ void ControlParameters::createElements(){
 			elementContainer[i]->setANGLE3(elANGLE3[i]);
 			elementContainer[i]->setElementNodes(elementNodes[i]);
 			elementContainer[i]->ROTMATTENSYM();
+			elementContainer[i]->setGXSI(new double[8]);
+			elementContainer[i]->setGETA(new double[8]);
+			elementContainer[i]->setGZET(new double[8]);
 		}
 	}
 	else if (KTYPE[0] == 2){
@@ -4723,7 +4729,35 @@ void ControlParameters::BCSTEP(){
 
 void ControlParameters::ELEMN3(){
  // Too Much to Do
-	cout << " Hello " << endl;
+	// Decide Whether to Calculate Centroid velocities on this call
+	double GXLOC[8] = { -1, 1, 1, -1, -1, 1, 1, -1 };
+	double GYLOC[8] = { -1, -1, 1, 1, -1, -1, 1, 1 };
+	double GZLOC[8] = { -1, -1, -1, -1, 1, 1, 1, 1 };
+	int IVCALC = 0;
+	int JVCALC = 0;
+	int KVCALC = 0;
+	if ((ML != 2) && (ITER == 1))
+		IVCALC = 1;
+	if (IT == 1)
+		IVCALC = 1;
+	if ((KVEL == 1) || InputFiles::Instance()->filesToWrite["ELE"] != "")
+		JVCALC = 1;
+
+		KVCALC = IVCALC + JVCALC;
+
+	//	ON FIRST TIME STEP, PREPARE GRAVITY VECTOR COMPONENTS,GXSI, GETA, AND GZET FOR CONSISTENT VELOCITIES, AND CHECK ELEMENT SHAPES
+		if (INTIM <= 0){
+			INTIM = 1;
+			for (int el = 1; el <= elementContainer.size(); el++){
+				int * elNodes = elementContainer[el]->getElementNodes();
+				for (int nn = 0; nn < 8; nn++){
+					BASIS3(0,el,nn, elNodes[nn], GXLOC[nn], GYLOC[nn], GZLOC[nn]);
+				}
+			}
+		}
+
+
+
 }
 void ControlParameters::ELEMN2(){}
 void ControlParameters::ADSORB(){}
@@ -4749,4 +4783,66 @@ void ControlParameters::setITERPARAMS(){
 			nodeContainer[i]->setPM1(nodeContainer[i]->getPVEC());
 		}
 	}
+}
+
+void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XLOC, double YLOC, double ZLOC){
+	double XF1, XF2, YF1, YF2, ZF1, ZF2;
+	double XIIX[8] = { -1, 1, 1, -1, -1, 1, 1, -1 };
+	double YIIY[8] = { -1, -1, 1, 1, -1, -1, 1, 1 };
+	double ZIIZ[8] = { -1, -1, -1, -1, 1, 1, 1, 1 };
+	XF1 = 1 - XLOC;
+	XF2 = 1 + XLOC;
+	YF1 = 1 - YLOC;
+	YF2 = 1 + YLOC;
+	ZF1 = 1 - ZLOC;
+	ZF2 = 1 + ZLOC;
+	double FX[8] = { XF1, XF2, XF2, XF1, XF1, XF2, XF2, XF1 };
+	double FY[8] = { YF1, YF1, YF2, YF2, YF1, YF1, YF2, YF2 };
+	double FZ[8] = { ZF1, ZF1, ZF1, ZF1, ZF2, ZF2, ZF2, ZF2 };
+	double F[8] = {};
+	double DFDXL[8] = {};
+	double DFDYL[8] = {};
+	double DFDZL[8] = {};
+	double CJ[3][3] = {};
+	Matrix3d CJm(3,3);
+	Matrix3d iCJm(3, 3);
+	double DET;
+	double c1, c2, c3, c4, c5, c6, c7, c8, c9;
+	
+	for (int i = 0; i < 8; i++){
+		F[i] = 0.125*FX[i] * FY[i] * FZ[i];
+	}
+	// CALCULATE Derivatives wrt local coords
+	for (int i = 0; i < 8; i++){
+		DFDXL[i] = XIIX[i] * 0.125*FY[i] * FZ[i];
+		DFDYL[i] = YIIY[i] * 0.125*FX[i] * FZ[i];
+		DFDZL[i] = ZIIZ[i] * 0.125*FX[i] * FY[i];
+	}
+
+	// CALCULATE ELEMENTS OF JACoBIAN MATRIX;
+	for (int i = 0; i < 8; i++){
+		CJ[0][0] = CJ[0][0] + DFDXL[i] * nodeContainer[realNode]->getXCoord();
+		CJ[0][1] = CJ[0][1] + DFDXL[i] * nodeContainer[realNode]->getYCoord();
+		CJ[0][2] = CJ[0][2] + DFDXL[i] * nodeContainer[realNode]->getZCoord();
+		CJ[1][0] = CJ[1][0] + DFDYL[i] * nodeContainer[realNode]->getXCoord();
+		CJ[1][1] = CJ[1][1] + DFDYL[i] * nodeContainer[realNode]->getYCoord();
+		CJ[1][2] = CJ[1][2] + DFDYL[i] * nodeContainer[realNode]->getZCoord();
+		CJ[2][0] = CJ[2][0] + DFDZL[i] * nodeContainer[realNode]->getXCoord();
+		CJ[2][1] = CJ[2][1] + DFDZL[i] * nodeContainer[realNode]->getYCoord();
+		CJ[2][2] = CJ[2][2] + DFDZL[i] * nodeContainer[realNode]->getZCoord();
+	}
+	
+	for (int i = 0; i < 3; i++){
+		for (int j = 0; j < 3; j++){
+			CJm(i,j) = CJ[i][j];
+		}
+	}
+	DET = CJm.determinant();
+	if (ICALL == 0)
+		return;
+
+	iCJm = CJm.inverse();
+
+
+
 }

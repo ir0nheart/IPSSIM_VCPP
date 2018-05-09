@@ -199,3 +199,29 @@ void Element::print_Info(){
 	cout << setfill('#') << setw(80) << ""<< endl;
 
 }
+
+void Element::setGXSI(double * GXSI){
+
+	this->GXSI = GXSI;
+}
+
+void Element::setGETA(double * GETA){
+
+	this->GETA = GETA;
+}
+void Element::setGZET(double * GZET){
+	this->GZET = GZET;
+}
+
+void Element::putIntoGXSI(int ind,double GXSI){
+
+	this->GXSI[ind] = GXSI;
+}
+void Element::putIntoGETA(int ind, double GETA){
+
+	this->GETA[ind] = GETA;
+}
+void Element::putIntoGZET(int ind, double GZET){
+
+	this->GZET[ind] = GZET;
+}

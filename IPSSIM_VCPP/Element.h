@@ -82,6 +82,12 @@ public:
 	void ROTMAT3D(); // Compute Rotation Matrix
 	void TENSYM3D();
 	void print_Info();
+	void setGXSI(double * GXSI);
+	void setGETA(double * GETA);
+	void setGZET(double * GZET);
+	void putIntoGETA(int ind, double GETA);
+	void putIntoGXSI(int ind, double GXSI);
+	void putIntoGZET(int ind,double GZET);
 private:
     // Element Number
 	int ElementNumber;
@@ -120,6 +126,9 @@ private:
 
 	double rotationMatrix[3][3];
 	int * elementNodes;
+	double * GXSI;
+	double * GETA;
+	double * GZET;
 	double VMAG, VANG1, VANG2;
 };
 
