@@ -4721,7 +4721,10 @@ void ControlParameters::BCSTEP(){
 
 }
 
-void ControlParameters::ELEMN3(){}
+void ControlParameters::ELEMN3(){
+ // Too Much to Do
+	cout << " Hello " << endl;
+}
 void ControlParameters::ELEMN2(){}
 void ControlParameters::ADSORB(){}
 void ControlParameters::NODAL(){}
