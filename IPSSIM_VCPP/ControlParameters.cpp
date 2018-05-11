@@ -2736,6 +2736,35 @@ void ControlParameters::createElements(){
 			elementContainer[i]->setGXSI(new double[8]);
 			elementContainer[i]->setGETA(new double[8]);
 			elementContainer[i]->setGZET(new double[8]);
+			elementContainer[i]->setDET(new double[8]);
+
+
+
+			elementContainer[i]->setF(new double*[8]);
+			elementContainer[i]->setW(new double*[8]);
+			elementContainer[i]->setDWDXG(new double*[8]);
+			elementContainer[i]->setDWDYG(new double*[8]);
+			elementContainer[i]->setDWDZG(new double*[8]);
+			elementContainer[i]->setDFDXG(new double*[8]);
+			elementContainer[i]->setDFDYG(new double*[8]);
+			elementContainer[i]->setDFDZG(new double*[8]);
+			elementContainer[i]->setVXG(new double[8]);
+			elementContainer[i]->setVYG(new double[8]);
+			elementContainer[i]->setVZG(new double[8]);
+			elementContainer[i]->setSWG(new double[8]);
+			elementContainer[i]->setSWTG(new double[8]);
+			elementContainer[i]->setSWBG(new double[8]);
+			elementContainer[i]->setRHOG(new double[8]);
+			elementContainer[i]->setVISCG(new double[8]);
+			elementContainer[i]->setPORG(new double[8]);
+			elementContainer[i]->setVGMAG(new double[8]);
+			elementContainer[i]->setCNUBG(new double[8]);
+			elementContainer[i]->setRGXG(new double[8]);
+			elementContainer[i]->setRGYG(new double[8]);
+			elementContainer[i]->setRGZG(new double[8]);
+			elementContainer[i]->setRELKG(new double[8]);
+			elementContainer[i]->setRELKTG(new double[8]);
+			elementContainer[i]->setRELKBG(new double[8]);
 		}
 	}
 	else if (KTYPE[0] == 2){
@@ -4729,6 +4758,7 @@ void ControlParameters::BCSTEP(){
 
 void ControlParameters::ELEMN3(){
  // Too Much to Do
+	double GLOC = 0.577350269189626;
 	// Decide Whether to Calculate Centroid velocities on this call
 	double GXLOC[8] = { -1, 1, 1, -1, -1, 1, 1, -1 };
 	double GYLOC[8] = { -1, -1, 1, 1, -1, -1, 1, 1 };
@@ -4748,17 +4778,166 @@ void ControlParameters::ELEMN3(){
 	//	ON FIRST TIME STEP, PREPARE GRAVITY VECTOR COMPONENTS,GXSI, GETA, AND GZET FOR CONSISTENT VELOCITIES, AND CHECK ELEMENT SHAPES
 		if (INTIM <= 0){
 			INTIM = 1;
-			for (int el = 1; el <= elementContainer.size(); el++){
+			for (int el = 1; el <= NE; el++){
 				int * elNodes = elementContainer[el]->getElementNodes();
 				for (int nn = 0; nn < 8; nn++){
 					BASIS3(0,el,nn, elNodes[nn], GXLOC[nn], GYLOC[nn], GZLOC[nn]);
+					if (elementContainer[el]->getDET()[nn] <= 0){
+						ISTOP = ISTOP + 1;
+						string logLine = "";
+						Writer * logWriter = Writer::LSTInstance();
+						char buff[512];
+						_snprintf(buff, sizeof(buff), "           THE DETERMINANT OF JACOBIAN AT NODE %9d IN ELEMENT %9d IS NEGATIVE OR ZERO, %+15.7e", elementContainer[el]->getElementNodes()[nn], el, elementContainer[el]->getDET()[nn]);
+						logLine.append(buff);
+						logWriter->writeContainer.push_back(logLine);
+					}
 				}
 			}
+
+			if (ISTOP != 0){
+				exitOnError("INP-14B,22-1");
+			}
+
+			if (IUNSAT != 0)
+				IUNSAT = 2;
+
 		}
 
 
+		//LOOP THROUGH ALL ELEMENTS TO CARRY OUT SPATIAL INTEGRATION OF FLUX TERMS IN P AND / OR U EQUATIONS
+
+		for (int el = 1; el <= NE; el++){
+			double XIX, YIY, ZIZ;
+			XIX = YIY = ZIZ = -1.0;
+			double XLOC, YLOC, ZLOC;
+			int KG = 0;
+			for (int IZL = 0; IZL < 2; IZL++){
+				for (int IYL = 0; IYL < 2; IYL++){
+					for (int IZL = 0; IZL < 2; IZL++){
+						XLOC = XIX*GLOC;
+						YLOC = YIY*GLOC;
+						ZLOC = ZIZ*GLOC;
+						BASIS3(1, el, KG, elementContainer[el]->getElementNodes()[KG], XLOC, YLOC, ZLOC);
+						XIX = -XIX;
+						KG = KG++;
+					}
+					YIY = -YIY;
+				}
+				ZIZ = -ZIZ;
+			}
+			if ((KVCALC - 2) == 0){
+				double AXSUM, AYSUM, AZSUM;
+				AXSUM = AYSUM = AZSUM = 0;
+				for (int nod = 0; nod < 8; nod++){
+					AXSUM = AXSUM + elementContainer[el]->getVXG()[nod];
+					AYSUM = AYSUM + elementContainer[el]->getVYG()[nod];
+					AZSUM = AZSUM + elementContainer[el]->getVZG()[nod];
+				}
+				elementContainer[el]->setVMAG(sqrt(AXSUM*AXSUM + AYSUM*AYSUM + AZSUM*AZSUM));
+				if (elementContainer[el]->getVMAG() != 0){
+					elementContainer[el]->setVANG2(asin(AZSUM / elementContainer[el]->getVMAG())*57.29577951308232);
+					elementContainer[el]->setVMAG(elementContainer[el]->getVMAG()*0.125);
+					elementContainer[el]->setVANG1(atan2(AYSUM, AXSUM)*57.29577951308232);
+				}
+				else{
+					elementContainer[el]->setVANG2(0.0);
+					elementContainer[el]->setVANG1(0.0);
+				}
+			}
+
+
+			if ((ML - 1) <= 0){
+				double SWTEST = 0.0;
+				double ROMG = 0.0;
+				double RXXG[8] = {}, RXYG[8] = {}, RXZG[8] = {};
+				double RYXG[8] = {}, RYYG[8] = {}, RYZG[8] = {};
+				double RZXG[8] = {}, RZYG[8] = {}, RZZG[8] = {};
+			
+				for (int i = 0; i < 8; i++){
+					SWTEST = SWTEST + elementContainer[el]->getSWTG()[i];
+					ROMG = elementContainer[el]->getRHOG()[i] * elementContainer[el]->getRELKTG()[i] / elementContainer[el]->getVISCG()[i];
+					RXXG[i] = elementContainer[el]->getPERMXX()*ROMG;
+					RXYG[i] = elementContainer[el]->getPERMXY()*ROMG;
+					RXZG[i] = elementContainer[el]->getPERMXZ()*ROMG;
+					RYXG[i] = elementContainer[el]->getPERMYX()*ROMG;
+					RYYG[i] = elementContainer[el]->getPERMYY()*ROMG;
+					RYZG[i] = elementContainer[el]->getPERMYZ()*ROMG;
+					RZXG[i] = elementContainer[el]->getPERMZX()*ROMG;
+					RZYG[i] = elementContainer[el]->getPERMZY()*ROMG;
+					RZZG[i] = elementContainer[el]->getPERMZZ()*ROMG;
+				}
+
+				
+
+				
+					double VOLE[8] = {};
+					double DFLOWE[8] = {};
+					double BFLOWE[8][8] = {};
+					for (int i = 0; i < 8; i++){
+						double RXXGD, RXYGD, RXZGD, RYXGD, RYYGD, RYZGD, RZXGD, RZYGD, RZZGD;
+						double DET = elementContainer[el]->getDET()[i];
+						double RDRX, RDRY, RDRZ;
+						double RGXG = elementContainer[el]->getRGXG()[i];
+						double RGYG = elementContainer[el]->getRGYG()[i];
+						double RGZG = elementContainer[el]->getRGZG()[i];
+						double ** F = elementContainer[el]->getF();
+						double ** DWDXG = elementContainer[el]->getDWDXG();
+						double ** DWDYG = elementContainer[el]->getDWDYG();
+						double ** DWDZG = elementContainer[el]->getDWDZG();
+						double ** DFDXG = elementContainer[el]->getDFDXG();
+						double ** DFDYG = elementContainer[el]->getDFDYG();
+						double ** DFDZG = elementContainer[el]->getDFDZG();
+						RXXGD = RXXG[i] * DET;
+						RXYGD = RXYG[i] * DET;
+						RXZGD = RXZG[i] * DET;
+						RYXGD = RYXG[i] * DET;
+						RYYGD = RYYG[i] * DET;
+						RYZGD = RYZG[i] * DET;
+						RZXGD = RZXG[i] * DET;
+						RZYGD = RZYG[i] * DET;
+						RZZGD = RZZG[i] * DET;
+						RDRX = RXXGD * RGXG + RXYGD*RGYG + RXZGD*RGZG;
+						RDRY = RYXGD * RGXG + RYYGD*RGYG + RYZGD*RGZG;
+						RDRZ = RZXGD * RGXG + RZYGD*RGYG + RZZGD*RGZG;
+
+						for (int j = 0; j < 8; j++){
+							VOLE[j] = VOLE[j] + F[i][j] * DET;
+							DFLOWE[j] = DFLOWE[j] + RDRX*DWDXG[i][j] + RDRY*DWDYG[i][j] + RDRZ*DWDZG[i][j];
+
+						}
+						double RDDFJX, RDDFJY, RDDFJZ;
+						for (int j = 0; j < 8; j++){
+							RDDFJX = RXXGD*DFDXG[i][j] + RXYGD*DFDYG[i][j] + RXZGD*DFDZG[i][j];
+							RDDFJY = RYXGD*DFDXG[i][j] + RYYGD*DFDYG[i][j] + RYZGD*DFDZG[i][j];
+							RDDFJZ = RZXGD*DFDXG[i][j] + RZYGD*DFDYG[i][j] + RZZGD*DFDZG[i][j];
+							for (int k = 0; k < 8; k++){
+								BFLOWE[j][k] = BFLOWE[j][k] + DWDXG[i][k] * RDDFJX + DWDYG[i][k] * RDDFJY + DWDZG[i][k] * RDDFJZ;
+							}
+						}
+					}
+
+				
+			}
+			if ((ML - 1) != 0){
+				if (NOUMAT != 1){
+
+				}
+			}
+
+			if (KSOLVP == 0){
+				GLOBAN();
+			}
+			else{
+				GLOCOL();
+			}
+		}
+
+		
+
 
 }
+void ControlParameters::GLOCOL(){}
+void ControlParameters::GLOBAN(){}
 void ControlParameters::ELEMN2(){}
 void ControlParameters::ADSORB(){}
 void ControlParameters::NODAL(){}
@@ -4800,15 +4979,48 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	double FY[8] = { YF1, YF1, YF2, YF2, YF1, YF1, YF2, YF2 };
 	double FZ[8] = { ZF1, ZF1, ZF1, ZF1, ZF2, ZF2, ZF2, ZF2 };
 	double F[8] = {};
+	double W[8] = {};
+	double DWDXG[8] = {};
+	double DWDYG[8] = {};
+	double DWDZG[8] = {};
+	double DWDXL[8] = {};
+	double DWDYL[8] = {};
+	double DWDZL[8] = {};
 	double DFDXL[8] = {};
 	double DFDYL[8] = {};
 	double DFDZL[8] = {};
+	double DFDXG[8] = {};
+	double DFDYG[8] = {};
+	double DFDZG[8] = {};
+	double AA, BB, CC;
+	double XIXI, YIYI, ZIZI;
+	double AFX[8] = {};
+	double AFY[8] = {};
+	double AFZ[8] = {};
+	double XDW[8] = {};
+	double YDW[8] = {};
+	double ZDW[8] = {};
+	double THAAX, THBBY, THCCZ;
+	AA = BB = CC = 0;
 	double CJ[3][3] = {};
 	Matrix3d CJm(3,3);
-	Matrix3d iCJm(3, 3);
+	Matrix3d iCJm(3,3);
 	double DET;
-	double c1, c2, c3, c4, c5, c6, c7, c8, c9;
-	
+	double SWG, RELKG;
+	double RGXL,RGYL,RGZL,RGXLM1,RGYLM1,RGZLM1;
+	RGXL= RGYL= RGZL= RGXLM1= RGYLM1= RGZLM1 = 0;
+	double RGXG, RGYG, RGZG, RGXGM1, RGYGM1, RGZGM1;
+	RGXG = RGYG = RGZG = RGXGM1 = RGYGM1 = RGZGM1 = 0;
+	double ADFDXL, ADFDYL, ADFDZL;
+	double PITERG, UITERG, CNUBG, PORG, DPDXG, DPDYG, DPDZG;
+	PITERG = UITERG = CNUBG = PORG = DPDXG = DPDYG = DPDZG = 0;
+	double RHOG, VISCG;
+	double DENOM, PGX, PGY, PGZ;
+	double VGMAG, VXG, VYG, VZG; // GLOBAL VELOCITIES
+	double VLMAG, VXL, VYL, VZL; // LOCAL VELOCITIES
+	double SWBG, RELKBG, RELKTG, SWTG;
+	double DSWDPG;
+
 	for (int i = 0; i < 8; i++){
 		F[i] = 0.125*FX[i] * FY[i] * FZ[i];
 	}
@@ -4820,16 +5032,18 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	}
 
 	// CALCULATE ELEMENTS OF JACoBIAN MATRIX;
+	
 	for (int i = 0; i < 8; i++){
-		CJ[0][0] = CJ[0][0] + DFDXL[i] * nodeContainer[realNode]->getXCoord();
-		CJ[0][1] = CJ[0][1] + DFDXL[i] * nodeContainer[realNode]->getYCoord();
-		CJ[0][2] = CJ[0][2] + DFDXL[i] * nodeContainer[realNode]->getZCoord();
-		CJ[1][0] = CJ[1][0] + DFDYL[i] * nodeContainer[realNode]->getXCoord();
-		CJ[1][1] = CJ[1][1] + DFDYL[i] * nodeContainer[realNode]->getYCoord();
-		CJ[1][2] = CJ[1][2] + DFDYL[i] * nodeContainer[realNode]->getZCoord();
-		CJ[2][0] = CJ[2][0] + DFDZL[i] * nodeContainer[realNode]->getXCoord();
-		CJ[2][1] = CJ[2][1] + DFDZL[i] * nodeContainer[realNode]->getYCoord();
-		CJ[2][2] = CJ[2][2] + DFDZL[i] * nodeContainer[realNode]->getZCoord();
+		int nodeNum = elementNodes[el][i];
+		CJ[0][0] = CJ[0][0] + DFDXL[i] * nodeContainer[nodeNum]->getXCoord();
+		CJ[0][1] = CJ[0][1] + DFDXL[i] * nodeContainer[nodeNum]->getYCoord();
+		CJ[0][2] = CJ[0][2] + DFDXL[i] * nodeContainer[nodeNum]->getZCoord();
+		CJ[1][0] = CJ[1][0] + DFDYL[i] * nodeContainer[nodeNum]->getXCoord();
+		CJ[1][1] = CJ[1][1] + DFDYL[i] * nodeContainer[nodeNum]->getYCoord();
+		CJ[1][2] = CJ[1][2] + DFDYL[i] * nodeContainer[nodeNum]->getZCoord();
+		CJ[2][0] = CJ[2][0] + DFDZL[i] * nodeContainer[nodeNum]->getXCoord();
+		CJ[2][1] = CJ[2][1] + DFDZL[i] * nodeContainer[nodeNum]->getYCoord();
+		CJ[2][2] = CJ[2][2] + DFDZL[i] * nodeContainer[nodeNum]->getZCoord();
 	}
 	
 	for (int i = 0; i < 3; i++){
@@ -4838,11 +5052,365 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 		}
 	}
 	DET = CJm.determinant();
+	elementContainer[el]->putIntoDET(node,DET);
+	double GXSI, GETA, GZET;
+	GXSI = CJm(0, 0)*GRAVX + CJm(0, 1)*GRAVY + CJm(0, 2)*GRAVZ;
+	GETA = CJm(1, 0)*GRAVX + CJm(1, 1)*GRAVY + CJm(1, 2)*GRAVZ;
+	GZET = CJm(2, 0)*GRAVX + CJm(2, 1)*GRAVY + CJm(2, 2)*GRAVZ;
+	elementContainer[el]->putIntoGXSI(node, GXSI);
+	elementContainer[el]->putIntoGETA(node, GETA);
+	elementContainer[el]->putIntoGZET(node, GZET);
 	if (ICALL == 0)
 		return;
 
 	iCJm = CJm.inverse();
+	//Calculate3 determinates in Global coordinates
+
+	for (int i = 0; i < 8; i++){
+		DFDXG[i] = iCJm(0, 0)*DFDXL[i] + iCJm(0, 1)*DFDYL[i] + iCJm(0, 2)*DFDZL[i];
+		DFDYG[i] = iCJm(1, 0)*DFDXL[i] + iCJm(1, 1)*DFDYL[i] + iCJm(1, 2)*DFDZL[i];
+		DFDZG[i] = iCJm(2, 0)*DFDXL[i] + iCJm(2, 1)*DFDYL[i] + iCJm(2, 2)*DFDZL[i];
+	}
+
+	// CALCULATE CONSISTENT COMPONENTS OF (RHO*GRAV) TERM IN LOCAL COORDINATES
+	for (int i = 0; i < 8; i++){
+		int nodeNumber = elementNodes[el][i];
+		ADFDXL = abs(DFDXL[i]);
+		ADFDYL = abs(DFDYL[i]);
+		ADFDZL = abs(DFDZL[i]);
+		RGXL = RGXL + nodeContainer[nodeNumber]->getRCIT() * elementContainer[el]->getGXSI()[i] * ADFDXL;
+		RGYL = RGYL + nodeContainer[nodeNumber]->getRCIT() * elementContainer[el]->getGETA()[i] * ADFDYL;
+		RGZL = RGZL + nodeContainer[nodeNumber]->getRCIT() * elementContainer[el]->getGZET()[i] * ADFDZL;
+		RGXLM1 = RGXLM1 + nodeContainer[nodeNumber]->getRCITM1() * elementContainer[el]->getGXSI()[i] * ADFDXL;
+		RGYLM1 = RGYLM1 + nodeContainer[nodeNumber]->getRCITM1() * elementContainer[el]->getGETA()[i] * ADFDYL;
+		RGZLM1 = RGZLM1 + nodeContainer[nodeNumber]->getRCITM1() * elementContainer[el]->getGZET()[i] * ADFDZL;
+	}
+
+	// TRANSFORM CONSISTENT COMPONENTS OF (RHO*GRAV) TERM TO GLOBAL Coordinates
+
+	RGXG = iCJm(0,0)*RGXL + iCJm(0,1)*RGYL + iCJm(0,2)*RGZL;
+	RGYG = iCJm(1,0)*RGXL + iCJm(1,1)*RGYL + iCJm(1,2)*RGZL;
+	RGZG = iCJm(2,0)*RGXL + iCJm(2,1)*RGYL + iCJm(2,2)*RGZL;
+	RGXGM1 = iCJm(0,0)*RGXLM1 + iCJm(0,1)*RGYLM1 + iCJm(0,2)*RGZLM1;
+	RGYGM1 = iCJm(1,0)*RGXLM1 + iCJm(1,1)*RGYLM1 + iCJm(1,2)*RGZLM1;
+	RGZGM1 = iCJm(2,0)*RGXLM1 + iCJm(2,1)*RGYLM1 + iCJm(2,2)*RGZLM1;
+
+	for (int i = 0; i < 8; i++){
+		int nodeNum = elementNodes[el][i];
+		DPDXG = DPDXG + nodeContainer[nodeNum]->getPVEL()*DFDXG[i];
+		DPDYG = DPDYG + nodeContainer[nodeNum]->getPVEL()*DFDYG[i];
+		DPDZG = DPDZG + nodeContainer[nodeNum]->getPVEL()*DFDZG[i];
+		PORG = PORG + nodeContainer[nodeNum]->getPorosity()*F[i];
+		PITERG = PITERG + nodeContainer[nodeNum]->getPITER()*F[i];
+		UITERG = UITERG + nodeContainer[nodeNum]->getUITER()*F[i];
+		CNUBG = CNUBG + nodeContainer[nodeNum]->getCNUB()*F[i];
+	}
+
+	RHOG = RHOW0 + DRWDU*(UITERG - URHOW0);
+	VISCG = VISC0;
+
+	if ((IUNSAT - 2) == 0){
+		if (PITERG < 0){
+			UNSAT(SWG, DSWDPG, RELKG, PITERG, elementContainer[el]->getLREG());
+		}
+		else{
+			SWG = 1.0;
+			RELKG = 1.0;
+		}
+	}
+	else{
+		SWG = 1.0;
+		RELKG = 1.0;
+	}
+	SWTG = RELKTG = RELKBG = SWBG = 0;
+	BUBSAT(SWBG, RELKBG, PITERG, CNUBG, RELKTG, SWTG, SWG, RELKG);
+
+	DENOM = 1.0 / (PORG*SWTG*VISCG);
+	PGX = DPDXG - RGXGM1;
+	PGY = DPDYG - RGYGM1;
+	PGZ = DPDZG - RGZGM1;
+
+	if (DPDXG != 0){
+		if ((abs(PGX / DPDXG) - (1E-10)) <= 0)
+			PGX = 0.0;
+	}
+	if (DPDYG != 0){
+		if ((abs(PGY / DPDYG) - (1E-10)) <= 0)
+			PGY = 0.0;
+	}
+	if (DPDZG != 0){
+		if ((abs(PGZ / DPDZG) - (1E-10)) <= 0)
+			PGZ = 0.0;
+	}
+
+	VXG = -DENOM*(elementContainer[el]->getPERMXX()*PGX + elementContainer[el]->getPERMXY()*PGY + elementContainer[el]->getPERMXZ()*PGZ)*RELKTG;
+	VYG = -DENOM*(elementContainer[el]->getPERMYX()*PGX + elementContainer[el]->getPERMYY()*PGY + elementContainer[el]->getPERMYZ()*PGZ)*RELKTG;
+	VZG = -DENOM*(elementContainer[el]->getPERMZX()*PGX + elementContainer[el]->getPERMZY()*PGY + elementContainer[el]->getPERMZZ()*PGZ)*RELKTG;
+	VGMAG = sqrt(VXG*VXG + VYG*VYG + VZG*VZG);
+	elementContainer[el]->putIntoVGMAG(node, VGMAG);
+	elementContainer[el]->putIntoVXG(node, VXG);
+	elementContainer[el]->putIntoVYG(node, VYG);
+	elementContainer[el]->putIntoVZG(node, VZG);
+
+	if ((UP > (1E-6)) && (NOUMAT == 0))
+		goto ASYM;
+
+	for (int i = 0; i < 8; i++){
+		W[i] = F[i];
+		DWDXG[i] = DFDXG[i];
+		DWDYG[i] = DFDYG[i];
+		DWDZG[i] = DFDZG[i];
+	}
+	return;
+
+ASYM:
+	//CALCULATE FLUID VELOCITIES WITH RESPECT TO LOCAL COORDINATES,VXL, VYL, VZL, AND VLMAG, AT THIS LOCATION, (XLOC, YLOC, ZLOC).
+	VXL = iCJm(0, 0)*VXG + iCJm(0, 1)*VYG + iCJm(0, 2)*VZG;
+	VYL = iCJm(1, 0)*VXG + iCJm(1, 1)*VYG + iCJm(1, 2)*VZG;
+	VZL = iCJm(2, 0)*VXG + iCJm(2, 1)*VYG + iCJm(2, 2)*VZG;
+	VLMAG = sqrt(VXL*VXL + VYL*VYL + VZL*VZL);
 
 
+	if (VLMAG <= 0){
+		XIXI = .7500*AA*XF1*XF2;
+		YIYI = .7500*BB*YF1*YF2;
+		ZIZI = .7500*CC*ZF1*ZF2;
+	}
+	else{
+		AA = UP* VXL / VLMAG;
+		BB = UP*VYL / VLMAG;
+		CC = UP*VZL / VLMAG;
+	}
+
+	for (int i = 0; i < 8; i++){
+		AFX[i] = 0.5*FX[i] + XIIX[i] * XIXI;
+		AFY[i] = 0.5*FY[i] + YIIY[i] * YIYI;
+		AFZ[i] = 0.5*FZ[i] + ZIIZ[i] * ZIZI;
+	}
+	//CALCULATE ASYMMETRIC WEIGHTING FUNCTION, W.
+	for (int i = 0; i < 8; i++){
+		W[i] = AFX[i] * AFY[i] * AFZ[i];
+	}
+
+	THAAX = 0.5 - 1.5*AA*XLOC;
+	THBBY = 0.5 - 1.5*BB*YLOC;
+	THCCZ = 0.5 - 1.5*CC*ZLOC;
+	for (int i = 0; i < 8; i++){
+		XDW[i] = XIIX[i] * THAAX;
+		YDW[i] = YIIY[i] * THBBY;
+		ZDW[i] = ZIIZ[i] * THCCZ;
+	}
+	//CALCULATE DERIVATIVES WITH RESPECT TO LOCAL COORDINATES
+	for (int i = 0; i < 8; i++){
+		DWDXL[i] = XDW[i] * AFY[i] * AFZ[i];
+		DWDYL[i] = YDW[i] * AFX[i] * AFZ[i];
+		DWDZL[i] = ZDW[i] * AFX[i] * AFY[i];
+	}
+	//CALCULATE DERIVATIVES WITH RESPECT TO GLOBAL COORDINATES
+	for (int i = 0; i < 8; i++){
+		DWDXG[i] = iCJm(0, 0)*DWDXL[i] + iCJm(0, 1)*DWDYL[i] + iCJm(0, 2)*DWDZL[i];
+		DWDYG[i] = iCJm(1, 0)*DWDXL[i] + iCJm(1, 1)*DWDYL[i] + iCJm(1, 2)*DWDZL[i];
+		DWDZG[i] = iCJm(2, 0)*DWDXL[i] + iCJm(2, 1)*DWDYL[i] + iCJm(2, 2)*DWDZL[i];
+	}
+	
+}
+
+void ControlParameters::UNSAT(double& SW,double& DSWDP, double& RELK, double PRES, double KREG){
+
+	// PURPOSE :            
+	//	  USER - PROGRAMMED FUNCTION GIVING : 
+	//	  (1)  SATURATION AS A FUNCTION OF PRESSURE(SW(PRES))  
+	//	  (2)  DERIVATIVE OF SATURATION WITH RESPECT TO PRESSURE   
+	//	       AS A FUNCTION OF EITHER PRESSURE OR SATURATION        
+	//	       (DSWDP(PRES), OR DSWDP(SW))                      
+	//	  (3)  RELATIVE PERMEABILITY AS A FUNCTION OF EITHER 
+	//	       PRESSURE OR SATURATION(REL(PRES) OR RELK(SW)) 
+	//	                                                     
+	//	  CODE BETWEEN DASHED LINES MUST BE REPLACED TO GIVE THE
+	//	  PARTICULAR UNSATURATED RELATIONSHIPS DESIRED
+	//	  
+	//	  DIFFERENT FUNCTIONS MAY BE GIVEN FOR EACH REGION OF THE MESH.
+	//	  REGIONS ARE SPECIFIED BY BOTH NODE NUMBER AND ELEMENT NUMBER
+	//	  IN INPUT DATA FILE FOR UNIT K1(INP).
+
+
+	/*E X A M P L E   C O D I N G   FOR                                 
+		     MESH WITH TWO REGIONS OF UNSATURATED PROPERTIES USING              
+		     THREE PARAMETER - UNSATURATED FLOW RELATIONSHIPS OF                 
+		     VAN GENUCHTEN(1980)                                            
+		        RESIDUAL SATURATION, SWRES, GIVEN IN UNITS{ L**0 }           
+		        PARAMETER, AA, GIVEN IN INVERSE PRESSURE UNITS{ m*(s**2) / kg }    
+		        PARAMETER, VN, GIVEN IN UNITS{ L**0 }                           */
+
+	double SWRES, AA, VN, SWRM1, AAPVN, VNF, AAPVNN, DNUM, DNOM, SWSTAR;
+	double SWRES1, SWRES2, AA1, AA2, VN1, VN2;
+	SWRES1 = SWRES2 = 0.3;
+	AA1 = AA2 = 5e-5;
+	VN1 = VN2 = 2.0;
+
+	if (KREG == 1){
+		SWRES = SWRES1;
+		AA = AA1;
+		VN = VN1;
+	}
+	else{
+		SWRES = SWRES2;
+		AA = AA2;
+		VN = VN2;
+	}
+
+	//SECTION(1) :
+	//	   SW VS.PRES(VALUE CALCULATED ON EACH CALL TO UNSAT)
+	//	   CODING MUST GIVE A VALUE TO SATURATION, SW.
+
+	SWRM1 = 1 - SWRES;
+	AAPVN = 1 + pow(AA*(-PRES), VN);
+	VNF = (VN - 1) / VN;
+	AAPVNN = pow(AAPVN, VNF);
+	SW = (SWRES + SWRM1) / AAPVNN;
+
+	if ((IUNSAT - 2) < 0){
+		DNUM = AA*(VN - 1)*SWRM1*pow(AA*(-PRES), (VN - 1));
+		DNOM = AAPVN*AAPVNN;
+		DSWDP = DNUM / DNOM;
+	}
+	else if ((IUNSAT - 2) == 0){
+		SWSTAR = (SW - SWRES) / SWRM1;
+		RELK = sqrt(SWSTAR*pow(1 - pow(1 - pow(SWSTAR, 1 / VNF), VNF), 2));
+	}
+}
+
+void ControlParameters::BUBSAT(double& SWBG, double&  RELKBG, double  PITERG, double  CNUBG, double&  RELKTG, double& SWTG, double SWG, double  RELKG){
+	int n = 2; // this should change
+	SWBG = (PSTAR + PITERG) / ((PSTAR + PITERG) + (CNUBG*GCONST*TEMP));
+	RELKBG = pow(SWBG, n);
+	SWTG = SWBG * SWG;
+	RELKTG = RELKBG*RELKG;
+}
+
+void ControlParameters::createSolverMatrix(){
+	if (KSOLVP == 0){ // Direct Solver
+		PMAT << MatrixXd::Zero(NELT, NBI);
+		UMAT << MatrixXd::Zero(NELT, NBI);
+		PPVEC << VectorXd::Zero(NNVEC);
+		UUVEC << VectorXd::Zero(NNVEC);
+		FWK << VectorXd::Zero(1);
+		IWK << VectorXd::Zero(1);
+	}
+	else{
+
+		int NWIP, NWIU, NWFP, NWFU;
+		NWIP = NWIU = NWFP = NWFU = 0;
+		DIMWRK(KSOLVP, NSAVEP, NWIP, NWFP);
+		DIMWRK(KSOLVU, NSAVEU, NWIU, NWFU);
+		NWI = max(NWIP, NWIU);
+		NWF = max(NWFP, NWFU);
+
+		PMAT << MatrixXd::Zero(NELT, 1);
+		UMAT << MatrixXd::Zero(NELT, 1);
+		PPVEC << VectorXd::Zero(NNVEC);
+		UUVEC << VectorXd::Zero(NNVEC);
+		FWK << VectorXd::Zero(NWF);
+		IWK << VectorXd::Zero(NWI);
+
+	}
+}
+
+void ControlParameters::DIMWRK(int KSOLVR,int NSAVE,int& NWI,int &NWF){
+	if (KSOLVR == 1){
+		NL = (NELT + NN) / 2;
+		NWI = 11 + 2 * NL;
+		NWF = NL + 5 * NN + 1;
+	}
+	else if (KSOLVR == 2){
+		NWI = NELT * 2 + 31;
+		NWF = 2 + (NN * (NSAVE + 7)) + NSAVE *(NSAVE + 3) + (NELT - NN);
+	}
+	else if (KSOLVR == 3){
+		NWI = NELT * 2 + 11;
+		NWF = 1 + 3 * NN*(NSAVE + 1) + 7 * NN + NSAVE + (NELT - NN);
+	}
+}
+
+void ControlParameters::PTRSET(){
+	vector<int> LLIST;
+	vector<vector<int>>HLIST;
+
+	LLIST.reserve(NN);
+	HLIST.reserve(NN);
+	for (int i = 0; i < NN;i++){
+		LLIST.push_back(0);
+		HLIST.push_back(vector<int>(0));
+	}
+	
+	int IC, JC;
+	IC = JC = 0;
+
+	for (int el = 1; el <= NE; el++){
+		
+		int * elNodes = elementNodes[el];
+		for (int i = 0; i < N48; i++){
+			IC = elNodes[i];
+			//vector<int> neighbors;
+			for (int j = 0; j < N48; j++){
+				vector<int>defNeighbors;
+				if (!HLIST.empty()){ defNeighbors= HLIST[IC - 1]; }
+				JC = elNodes[j];
+				if (JC == IC)
+					continue;
+
+				if (defNeighbors.empty()){ // Empty
+					//neighbors.push_back(JC);
+					HLIST[IC - 1].push_back(JC);
+					LLIST[IC-1] = LLIST[IC-1] + 1;
+				}
+				else{
+					if (!(find(defNeighbors.begin(), defNeighbors.end(), JC) != defNeighbors.end())){
+						//neighbors.push_back(JC);
+						HLIST[IC - 1].push_back(JC);
+						LLIST[IC-1] = LLIST[IC-1] + 1;
+					}
+				}
+			
+			}
+		}
+
+	}
+
+	// Sort Neighbors
+
+	for (int i = 0; i < NN;i++){
+		vector<int> f = HLIST[i];
+		sort(f.begin(), f.end(), [](int& s, int& b){return s < b; });
+		HLIST[i] = f;
+	}
+
+	for (int x : LLIST){
+		NELT = NELT + x + 1;
+	}
+
+	IA = VectorXd::Zero(NELT);
+	JA = VectorXd::Zero(NN+1);
+	int * IAA = new int[NELT + 1];
+	int * JAA = new int[NN + 2];
+
+	int JASTART = 1;
+	for (int i = 1; i <= NN; i++){
+		JAA[i] = JASTART;
+		IAA[JASTART] = i;
+		for (int j = 1; j <= LLIST[i-1]; j++){
+			IAA[JASTART + j] = HLIST[i-1][j-1];
+		}
+		JASTART = JASTART + LLIST[i-1]+1;
+	}
+	JAA[NN] = NELT + 1;
+
+	for (int i = 1; i <= (NELT); i++){
+		IA(i - 1) = IAA[i];
+	}
+
+	for (int i = 1; i <= (NN + 1);i++){
+		JA(i - 1) = JAA[i];
+	}
 
 }

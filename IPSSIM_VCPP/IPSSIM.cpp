@@ -173,6 +173,13 @@ void main(){
 	ControlParameters* controlParameters = ControlParameters::Instance();
 	Miscellaneous::spacer();
 
+	/*double SWBG =0,   RELKBG=0,   PITERG=10,   CNUBG=1,   RELKTG=0,  SWTG=0,  SWG=0.9,   RELKG=1;
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
+	cout << "SWBG*	RELKBG*	 PITERG	 CNUBG	RELKTG*	 SWTG*	 SWG	RELKG" << endl;
+	cout << SWBG << " " << RELKBG << " " << PITERG << " " << CNUBG << " " << RELKTG << " " << SWTG << " " << SWG << " " << RELKG << endl;
+	controlParameters->BUBSAT(SWBG, RELKBG, PITERG, CNUBG, RELKTG, SWTG, SWG, RELKG);
+	cout << SWBG << " " << RELKBG << " " << PITERG << " " << CNUBG << " " << RELKTG << " " << SWTG << " " << SWG << " " << RELKG << endl;
+	cout << " Check up" << endl;*/
 
 	
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
@@ -244,17 +251,19 @@ void main(){
 	// MATRIX STRUCTURE IN "SLAP COLUMN FORMAT. DIMENSION NELT GETS SET HERE
 
 	if (controlParameters->getKSOLVP() != 0){
-		
+		controlParameters->PTRSET();
 	}
 	else{
 		controlParameters->setNELT(controlParameters->getNN());
 		int NDIMIA = 1;
 		// Allocate IA here
-		
+
 
 	}
 
 	controlParameters->BANWID();
+
+	controlParameters->createSolverMatrix();
 
 	// Read BCS Files Here
 	if (inputFiles->getBcsDef()){

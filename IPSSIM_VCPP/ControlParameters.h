@@ -33,8 +33,9 @@
 #include "Writer.h"
 #include <map>
 #include <iostream>
-#include "..\packages\Eigen.3.3.3\build\native\include\Eigen\Dense"
+#include <Eigen\Dense>
 using namespace std;
+using namespace Eigen;
 #pragma once
 class InputFiles;
 class DataSet;
@@ -57,7 +58,7 @@ public:
 	double * nodePVEC;
 	double * nodeUVEC;
 
-
+	void PTRSET();
 	void createNodes();
 	void createElements();
 
@@ -522,8 +523,22 @@ public:
 	void NODAL();
 	void BC();
 	void BASIS3(int ICALL,int el, int node,int realNode, double XLOC, double YLOC, double ZLOC);
-	
+	void UNSAT(double& SW, double& DSWDP, double& RELK, double PRES, double KREG);
+	void BUBSAT(double& SWBG, double&  RELKBG, double  PITERG, double  CNUBG, double&  RELKTG, double& SWTG, double SWG, double  RELKG);
+	void GLOCOL();
+	void GLOBAN();
+	void createSolverMatrix();
+	void DIMWRK(int KSOLVR,int NSAVE,int& NWI, int& NWF);
+	MatrixXd PMAT;
+	MatrixXd UMAT;
+	VectorXd FWK;
+	VectorXd IWK;
+	VectorXd PPVEC;
+	VectorXd UUVEC;
+	VectorXd IA;
+	VectorXd JA;
 private:
+	int NL, NWI, NWF;
 	double DELTLC, RELCHG,TELAPS;
 	int NOUMAT;
 	int ITOUT;
@@ -808,5 +823,6 @@ private:
 	vector<BCS *> bcsContainer;
 	
 	int INTIM = 0;
+	int ISTOP = 0;
 };
 #endif
