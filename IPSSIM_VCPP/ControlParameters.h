@@ -537,7 +537,32 @@ public:
 	VectorXd UUVEC;
 	VectorXd IA;
 	VectorXd JA;
+	
+
 private:
+	double VXG[8] ;
+	double VYG[8] ;
+	double VZG[8] ;
+	double VGMAG[8] ;
+	double SWTG[8] ;
+	double RHOG[8] ;
+	double RELKTG[8] ;
+	double VISCG[8] ;
+	double RGXG[8] ;
+	double RGYG[8] ;
+	double RGZG[8] ;
+	double DWDXG[8] ;
+	double DWDYG[8] ;
+	double DWDZG[8] ;
+	double DFDXG[8] ;
+	double DFDYG[8] ;
+	double DFDZG[8] ;
+	double F[8] ;
+	double W[8];
+	double PORG[8];
+	void DISPR3(int i, int el, double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG, double& DZXG, double& DZYG, double& DZZG);
+
+
 	int NL, NWI, NWF;
 	double DELTLC, RELCHG,TELAPS;
 	int NOUMAT;

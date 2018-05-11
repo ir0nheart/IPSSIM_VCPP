@@ -10,6 +10,32 @@ public:
 	Element(int elementNumber);
 
 	//Setters
+	/*
+	void setF(double ** F);
+	void setW(double ** W);
+	void setDWDXG(double ** DWDXG);
+	void setDWDYG(double ** DWDYG);
+	void setDWDZG(double ** DWDZG);
+	void setDFDXG(double ** DFDXG);
+	void setDFDYG(double ** DFDYG);
+	void setDFDZG(double ** DFDZG);
+	void setVXG(double *VXG);
+	void setVYG(double *VYG);
+	void setVZG(double *VZG);
+	void setSWG(double *SWG);
+	void setSWTG(double *SWTG);
+	void setSWBG(double *SWBG);
+	void setRHOG(double *RHOG);
+	void setVISCG(double *VISCG);
+	void setPORG(double *PORG);
+	void setVGMAG(double *VGMAG);
+	void setCNUBG(double *CNUBG);
+	void setRGXG(double *RGXG);
+	void setRGYG(double *RGYG);
+	void setRGZG(double *RGZG);
+	void setRELKG(double *RELKG);
+	void setRELKTG(double *RELKTG);
+	void setRELKBG(double *RELKBG);
 	double ** getF();
 	double ** getW();
 	double ** getDWDXG();
@@ -35,6 +61,33 @@ public:
 	double * getRELKG();
 	double * getRELKTG();
 	double * getRELKBG();
+	void putIntoF(int ind, int jnd, double  F);
+	void putIntoW(int ind, int jnd, double  W);
+	void putIntoDWDXG(int ind, int jnd, double  DWDXG);
+	void putIntoDWDYG(int ind, int jnd, double  DWDYG);
+	void putIntoDWDZG(int ind, int jnd, double  DWDZG);
+	void putIntoDFDXG(int ind, int jnd, double  DFDXG);
+	void putIntoDFDYG(int ind, int jnd, double  DFDYG);
+	void putIntoDFDZG(int ind, int jnd, double DFDZG);
+	void putIntoVXG(int ind,double VXG);
+	void putIntoVYG(int ind,double VYG);
+	void putIntoVZG(int ind,double VZG);
+	void putIntoSWG(int ind,double SWG);
+	void putIntoSWTG(int ind,double SWTG);
+	void putIntoSWBG(int ind,double SWBG);
+	void putIntoRHOG(int ind,double RHOG);
+	void putIntoVISCG(int ind,double VISCG);
+	void putIntoPORG(int ind,double PORG);
+	void putIntoVGMAG(int ind,double VGMAG);
+	void putIntoCNUBG(int ind,double CNUBG);
+	void putIntoRGXG(int ind,double RGXG);
+	void putIntoRGYG(int ind,double RGYG);
+	void putIntoRGZG(int ind,double RGZG);
+	void putIntoRELKG(int ind,double RELKG);
+	void putIntoRELKTG(int ind,double RELKTG);
+	void putIntoRELKBG(int ind,double RELKBG);
+	*/
+
 	double * getGXSI();
 	double * getGETA();
 	double * getGZET();
@@ -115,61 +168,14 @@ public:
 	void setGETA(double * GETA);
 	void setGZET(double * GZET);
 	void setDET(double * DET);
-	void setF(double ** F);
-	void setW(double ** W);
-	void setDWDXG(double ** DWDXG);
-	void setDWDYG(double ** DWDYG);
-	void setDWDZG(double ** DWDZG);
-	void setDFDXG(double ** DFDXG);
-	void setDFDYG(double ** DFDYG);
-	void setDFDZG(double ** DFDZG);
-	void setVXG(double *VXG);
-	void setVYG(double *VYG);
-	void setVZG(double *VZG);
-	void setSWG(double *SWG);
-	void setSWTG(double *SWTG);
-	void setSWBG(double *SWBG);
-	void setRHOG(double *RHOG);
-	void setVISCG(double *VISCG);
-	void setPORG(double *PORG);
-	void setVGMAG(double *VGMAG);
-	void setCNUBG(double *CNUBG);
-	void setRGXG(double *RGXG);
-	void setRGYG(double *RGYG);
-	void setRGZG(double *RGZG);
-	void setRELKG(double *RELKG);
-	void setRELKTG(double *RELKTG);
-	void setRELKBG(double *RELKBG);
+
+	
 
 	void putIntoGETA(int ind, double GETA);
 	void putIntoGXSI(int ind, double GXSI);
 	void putIntoGZET(int ind,double GZET);
 	void putIntoDET(int ind, double DET);
-	void putIntoF(int ind, int jnd, double  F);
-	void putIntoW(int ind, int jnd, double  W);
-	void putIntoDWDXG(int ind, int jnd, double  DWDXG);
-	void putIntoDWDYG(int ind, int jnd, double  DWDYG);
-	void putIntoDWDZG(int ind, int jnd, double  DWDZG);
-	void putIntoDFDXG(int ind, int jnd, double  DFDXG);
-	void putIntoDFDYG(int ind, int jnd, double  DFDYG);
-	void putIntoDFDZG(int ind, int jnd, double DFDZG);
-	void putIntoVXG(int ind,double VXG);
-	void putIntoVYG(int ind,double VYG);
-	void putIntoVZG(int ind,double VZG);
-	void putIntoSWG(int ind,double SWG);
-	void putIntoSWTG(int ind,double SWTG);
-	void putIntoSWBG(int ind,double SWBG);
-	void putIntoRHOG(int ind,double RHOG);
-	void putIntoVISCG(int ind,double VISCG);
-	void putIntoPORG(int ind,double PORG);
-	void putIntoVGMAG(int ind,double VGMAG);
-	void putIntoCNUBG(int ind,double CNUBG);
-	void putIntoRGXG(int ind,double RGXG);
-	void putIntoRGYG(int ind,double RGYG);
-	void putIntoRGZG(int ind,double RGZG);
-	void putIntoRELKG(int ind,double RELKG);
-	void putIntoRELKTG(int ind,double RELKTG);
-	void putIntoRELKBG(int ind,double RELKBG);
+	
 private:
     // Element Number
 	int ElementNumber;
@@ -214,7 +220,7 @@ private:
 	double * DET;
 	double VMAG, VANG1, VANG2;
 
-	double ** F;
+	/*double ** F;
 	double ** W;
 	double ** DWDXG;
 	double ** DWDYG;
@@ -239,5 +245,5 @@ private:
 	double *RELKG;
 	double *RELKTG;
 	double *RELKBG;
-
+*/
 };

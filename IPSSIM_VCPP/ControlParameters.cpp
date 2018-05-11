@@ -2740,7 +2740,7 @@ void ControlParameters::createElements(){
 
 
 
-			elementContainer[i]->setF(new double*[8]);
+		/*	elementContainer[i]->setF(new double*[8]);
 			elementContainer[i]->setW(new double*[8]);
 			elementContainer[i]->setDWDXG(new double*[8]);
 			elementContainer[i]->setDWDYG(new double*[8]);
@@ -2764,7 +2764,7 @@ void ControlParameters::createElements(){
 			elementContainer[i]->setRGZG(new double[8]);
 			elementContainer[i]->setRELKG(new double[8]);
 			elementContainer[i]->setRELKTG(new double[8]);
-			elementContainer[i]->setRELKBG(new double[8]);
+			elementContainer[i]->setRELKBG(new double[8]);*/
 		}
 	}
 	else if (KTYPE[0] == 2){
@@ -4807,6 +4807,11 @@ void ControlParameters::ELEMN3(){
 		//LOOP THROUGH ALL ELEMENTS TO CARRY OUT SPATIAL INTEGRATION OF FLUX TERMS IN P AND / OR U EQUATIONS
 
 		for (int el = 1; el <= NE; el++){
+			double VOLE[8] = {};
+			double DFLOWE[8] = {};
+			double BFLOWE[8][8] = {};
+			double BTRANE[8][8];
+			double DTRANE[8][8];
 			double XIX, YIY, ZIZ;
 			XIX = YIY = ZIZ = -1.0;
 			double XLOC, YLOC, ZLOC;
@@ -4829,9 +4834,9 @@ void ControlParameters::ELEMN3(){
 				double AXSUM, AYSUM, AZSUM;
 				AXSUM = AYSUM = AZSUM = 0;
 				for (int nod = 0; nod < 8; nod++){
-					AXSUM = AXSUM + elementContainer[el]->getVXG()[nod];
-					AYSUM = AYSUM + elementContainer[el]->getVYG()[nod];
-					AZSUM = AZSUM + elementContainer[el]->getVZG()[nod];
+					AXSUM = AXSUM + VXG[nod];
+					AYSUM = AYSUM + VYG[nod];
+					AZSUM = AZSUM + VZG[nod];
 				}
 				elementContainer[el]->setVMAG(sqrt(AXSUM*AXSUM + AYSUM*AYSUM + AZSUM*AZSUM));
 				if (elementContainer[el]->getVMAG() != 0){
@@ -4854,8 +4859,8 @@ void ControlParameters::ELEMN3(){
 				double RZXG[8] = {}, RZYG[8] = {}, RZZG[8] = {};
 			
 				for (int i = 0; i < 8; i++){
-					SWTEST = SWTEST + elementContainer[el]->getSWTG()[i];
-					ROMG = elementContainer[el]->getRHOG()[i] * elementContainer[el]->getRELKTG()[i] / elementContainer[el]->getVISCG()[i];
+					SWTEST = SWTEST + SWTG[i];
+					ROMG = RHOG[i] * RELKTG[i] /VISCG[i];
 					RXXG[i] = elementContainer[el]->getPERMXX()*ROMG;
 					RXYG[i] = elementContainer[el]->getPERMXY()*ROMG;
 					RXZG[i] = elementContainer[el]->getPERMXZ()*ROMG;
@@ -4870,23 +4875,14 @@ void ControlParameters::ELEMN3(){
 				
 
 				
-					double VOLE[8] = {};
-					double DFLOWE[8] = {};
-					double BFLOWE[8][8] = {};
+				
 					for (int i = 0; i < 8; i++){
 						double RXXGD, RXYGD, RXZGD, RYXGD, RYYGD, RYZGD, RZXGD, RZYGD, RZZGD;
 						double DET = elementContainer[el]->getDET()[i];
 						double RDRX, RDRY, RDRZ;
-						double RGXG = elementContainer[el]->getRGXG()[i];
-						double RGYG = elementContainer[el]->getRGYG()[i];
-						double RGZG = elementContainer[el]->getRGZG()[i];
-						double ** F = elementContainer[el]->getF();
-						double ** DWDXG = elementContainer[el]->getDWDXG();
-						double ** DWDYG = elementContainer[el]->getDWDYG();
-						double ** DWDZG = elementContainer[el]->getDWDZG();
-						double ** DFDXG = elementContainer[el]->getDFDXG();
-						double ** DFDYG = elementContainer[el]->getDFDYG();
-						double ** DFDZG = elementContainer[el]->getDFDZG();
+					
+					
+	
 						RXXGD = RXXG[i] * DET;
 						RXYGD = RXYG[i] * DET;
 						RXZGD = RXZG[i] * DET;
@@ -4896,22 +4892,22 @@ void ControlParameters::ELEMN3(){
 						RZXGD = RZXG[i] * DET;
 						RZYGD = RZYG[i] * DET;
 						RZZGD = RZZG[i] * DET;
-						RDRX = RXXGD * RGXG + RXYGD*RGYG + RXZGD*RGZG;
-						RDRY = RYXGD * RGXG + RYYGD*RGYG + RYZGD*RGZG;
-						RDRZ = RZXGD * RGXG + RZYGD*RGYG + RZZGD*RGZG;
+						RDRX = RXXGD * RGXG[i] + RXYGD*RGYG[i] + RXZGD*RGZG[i];
+						RDRY = RYXGD * RGXG[i] + RYYGD*RGYG[i] + RYZGD*RGZG[i];
+						RDRZ = RZXGD * RGXG[i] + RZYGD*RGYG[i] + RZZGD*RGZG[i];
 
 						for (int j = 0; j < 8; j++){
-							VOLE[j] = VOLE[j] + F[i][j] * DET;
-							DFLOWE[j] = DFLOWE[j] + RDRX*DWDXG[i][j] + RDRY*DWDYG[i][j] + RDRZ*DWDZG[i][j];
+							VOLE[j] = VOLE[j] + F[j] * DET;
+							DFLOWE[j] = DFLOWE[j] + RDRX*DWDXG[j] + RDRY*DWDYG[j] + RDRZ*DWDZG[j];
 
 						}
 						double RDDFJX, RDDFJY, RDDFJZ;
 						for (int j = 0; j < 8; j++){
-							RDDFJX = RXXGD*DFDXG[i][j] + RXYGD*DFDYG[i][j] + RXZGD*DFDZG[i][j];
-							RDDFJY = RYXGD*DFDXG[i][j] + RYYGD*DFDYG[i][j] + RYZGD*DFDZG[i][j];
-							RDDFJZ = RZXGD*DFDXG[i][j] + RZYGD*DFDYG[i][j] + RZZGD*DFDZG[i][j];
+							RDDFJX = RXXGD*DFDXG[j] + RXYGD*DFDYG[j] + RXZGD*DFDZG[j];
+							RDDFJY = RYXGD*DFDXG[j] + RYYGD*DFDYG[j] + RYZGD*DFDZG[j];
+							RDDFJZ = RZXGD*DFDXG[j] + RZYGD*DFDYG[j] + RZZGD*DFDZG[j];
 							for (int k = 0; k < 8; k++){
-								BFLOWE[j][k] = BFLOWE[j][k] + DWDXG[i][k] * RDDFJX + DWDYG[i][k] * RDDFJY + DWDZG[i][k] * RDDFJZ;
+								BFLOWE[j][k] = BFLOWE[j][k] + DWDXG[k] * RDDFJX + DWDYG[k] * RDDFJY + DWDZG[k] * RDDFJZ;
 							}
 						}
 					}
@@ -4920,6 +4916,87 @@ void ControlParameters::ELEMN3(){
 			}
 			if ((ML - 1) != 0){
 				if (NOUMAT != 1){
+					double BXXG[8] = {}, BXYG[8] = {}, BXZG[8] = {}, BYXG[8] = {}, BYYG[8] = {}, BYZG[8] = {}, BZXG[8] = {}, BZYG[8] = {}, BZZG[8] = {};
+					double EXG[8] = {}, EYG[8] = {}, EZG[8] = {};
+					for (int i = 0; i < 8; i++){
+						double ESWG = PORG[i] * SWTG[i];
+						double RHOCWG = RHOG[i] * CW;
+						double ESRCG = ESWG * RHOCWG;
+						
+						double DXXG, DXYG, DXZG, DYXG, DYYG, DYZG, DZXG, DZYG, DZZG;
+						
+						double ESE;
+						if (VGMAG[i] <= 0){
+							EXG[i] = 0.0;
+							EYG[i] = 0.0;
+							EZG[i] = 0.0;
+							DXXG = 0;
+							DXYG = 0;
+							DXZG = 0;
+							DYXG = 0;
+							DYYG = 0;
+							DYZG = 0;
+							DZXG = 0;
+							DZYG = 0;
+							DZZG = 0;
+						}
+						else{
+							EXG[i] = ESRCG*VXG[i];
+							EYG[i] = ESRCG*VYG[i];
+							EZG[i] = ESRCG*VZG[i];
+							DISPR3(i,el,DXXG,DXYG,DXZG,DYXG,DYYG,DYZG,DZXG,DZYG,DZZG);
+						}
+
+						ESE = ESRCG * SIGMAW + (1.0 - PORG[i])*RHOCWG*SIGMAS;
+						BXXG[i] = ESRCG * DXXG + ESE;
+						BXYG[i] = ESRCG * DXYG;
+						BXZG[i] = ESRCG * DXZG;
+						BYXG[i] = ESRCG * DYXG ;
+						BYYG[i] = ESRCG * DYYG + ESE;
+						BYZG[i] = ESRCG * DYZG ;
+						BZXG[i] = ESRCG * DZXG ;
+						BZYG[i] = ESRCG * DZYG ;
+						BZZG[i] = ESRCG * DZZG + ESE;
+					}
+
+					
+					for (int i = 0; i < 8; i++){
+						for (int j = 0; j < 8; j++){
+							BTRANE[i][j] = 0.0;
+							DTRANE[i][j] = 0.0;
+						}
+					}
+
+					for (int i = 0; i < 8; i++){
+						double BXXGD, BXYGD, BXZGD, BYXGD, BYYGD, BYZGD, BZXGD, BZYGD, BZZGD;
+						double EXGD, EYGD, EZGD;
+						double BDDFJX, BDDFJY, BDDFJZ, EDDFJ;
+						double DET = elementContainer[el]->getDET()[i];
+						BXXGD = BXXG[i] * DET;
+						BXYGD = BXYG[i] * DET;
+						BXZGD = BXZG[i] * DET;
+						BYXGD = BYXG[i] * DET;
+						BYYGD = BYYG[i] * DET;
+						BYZGD = BYZG[i] * DET;
+						BZXGD = BZXG[i] * DET;
+						BZYGD = BZYG[i] * DET;
+						BZZGD = BZZG[i] * DET;
+						EXGD = EXG[i] * DET;
+						EYGD = EYG[i] * DET;
+						EZGD = EZG[i] * DET;
+						for (int j = 0; j < 8; j++){
+							BDDFJX = BXXGD*DFDXG[j] + BXYGD*DFDYG[j] + BXZGD*DFDZG[j];
+							BDDFJY = BYXGD*DFDXG[j] + BYYGD*DFDYG[j] + BYZGD*DFDZG[j];
+							BDDFJZ = BZXGD*DFDXG[j] + BZYGD*DFDYG[j] + BZZGD*DFDZG[j];
+							EDDFJ = EXGD*DFDXG[j] + EYGD*DFDXG[j] + EZGD*DFDZG[j];
+							for (int k = 0; k < 8; k++){
+								BTRANE[k][j] = BTRANE[k][j] + DFDXG[k] * BDDFJX + DFDYG[k] * BDDFJY + DFDZG[k] * BDDFJZ;
+								DTRANE[k][j] = DTRANE[k][j] + EDDFJ * W[k];
+							}
+						}
+					}
+
+
 
 				}
 			}
@@ -4936,6 +5013,7 @@ void ControlParameters::ELEMN3(){
 
 
 }
+void ControlParameters::DISPR3(int i, int el, double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG, double& DZXG, double& DZYG, double& DZZG){}
 void ControlParameters::GLOCOL(){}
 void ControlParameters::GLOBAN(){}
 void ControlParameters::ELEMN2(){}
@@ -4978,20 +5056,12 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	double FX[8] = { XF1, XF2, XF2, XF1, XF1, XF2, XF2, XF1 };
 	double FY[8] = { YF1, YF1, YF2, YF2, YF1, YF1, YF2, YF2 };
 	double FZ[8] = { ZF1, ZF1, ZF1, ZF1, ZF2, ZF2, ZF2, ZF2 };
-	double F[8] = {};
-	double W[8] = {};
-	double DWDXG[8] = {};
-	double DWDYG[8] = {};
-	double DWDZG[8] = {};
 	double DWDXL[8] = {};
 	double DWDYL[8] = {};
 	double DWDZL[8] = {};
 	double DFDXL[8] = {};
 	double DFDYL[8] = {};
 	double DFDZL[8] = {};
-	double DFDXG[8] = {};
-	double DFDYG[8] = {};
-	double DFDZG[8] = {};
 	double AA, BB, CC;
 	double XIXI, YIYI, ZIZI;
 	double AFX[8] = {};
@@ -5009,16 +5079,16 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	double SWG, RELKG;
 	double RGXL,RGYL,RGZL,RGXLM1,RGYLM1,RGZLM1;
 	RGXL= RGYL= RGZL= RGXLM1= RGYLM1= RGZLM1 = 0;
-	double RGXG, RGYG, RGZG, RGXGM1, RGYGM1, RGZGM1;
-	RGXG = RGYG = RGZG = RGXGM1 = RGYGM1 = RGZGM1 = 0;
+	double RGXGM1, RGYGM1, RGZGM1;
+	RGXGM1 = RGYGM1 = RGZGM1 = 0;
 	double ADFDXL, ADFDYL, ADFDZL;
-	double PITERG, UITERG, CNUBG, PORG, DPDXG, DPDYG, DPDZG;
-	PITERG = UITERG = CNUBG = PORG = DPDXG = DPDYG = DPDZG = 0;
-	double RHOG, VISCG;
+	double PITERG, UITERG, CNUBG, DPDXG, DPDYG, DPDZG;
+	PITERG = UITERG = CNUBG = DPDXG = DPDYG = DPDZG = 0;
+
 	double DENOM, PGX, PGY, PGZ;
-	double VGMAG, VXG, VYG, VZG; // GLOBAL VELOCITIES
+	
 	double VLMAG, VXL, VYL, VZL; // LOCAL VELOCITIES
-	double SWBG, RELKBG, RELKTG, SWTG;
+	double SWBG, RELKBG;
 	double DSWDPG;
 
 	for (int i = 0; i < 8; i++){
@@ -5060,6 +5130,7 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	elementContainer[el]->putIntoGXSI(node, GXSI);
 	elementContainer[el]->putIntoGETA(node, GETA);
 	elementContainer[el]->putIntoGZET(node, GZET);
+
 	if (ICALL == 0)
 		return;
 
@@ -5088,9 +5159,9 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 
 	// TRANSFORM CONSISTENT COMPONENTS OF (RHO*GRAV) TERM TO GLOBAL Coordinates
 
-	RGXG = iCJm(0,0)*RGXL + iCJm(0,1)*RGYL + iCJm(0,2)*RGZL;
-	RGYG = iCJm(1,0)*RGXL + iCJm(1,1)*RGYL + iCJm(1,2)*RGZL;
-	RGZG = iCJm(2,0)*RGXL + iCJm(2,1)*RGYL + iCJm(2,2)*RGZL;
+	RGXG[node] = iCJm(0,0)*RGXL + iCJm(0,1)*RGYL + iCJm(0,2)*RGZL;
+	RGYG[node] = iCJm(1, 0)*RGXL + iCJm(1, 1)*RGYL + iCJm(1, 2)*RGZL;
+	RGZG[node] = iCJm(2, 0)*RGXL + iCJm(2, 1)*RGYL + iCJm(2, 2)*RGZL;
 	RGXGM1 = iCJm(0,0)*RGXLM1 + iCJm(0,1)*RGYLM1 + iCJm(0,2)*RGZLM1;
 	RGYGM1 = iCJm(1,0)*RGXLM1 + iCJm(1,1)*RGYLM1 + iCJm(1,2)*RGZLM1;
 	RGZGM1 = iCJm(2,0)*RGXLM1 + iCJm(2,1)*RGYLM1 + iCJm(2,2)*RGZLM1;
@@ -5100,14 +5171,14 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 		DPDXG = DPDXG + nodeContainer[nodeNum]->getPVEL()*DFDXG[i];
 		DPDYG = DPDYG + nodeContainer[nodeNum]->getPVEL()*DFDYG[i];
 		DPDZG = DPDZG + nodeContainer[nodeNum]->getPVEL()*DFDZG[i];
-		PORG = PORG + nodeContainer[nodeNum]->getPorosity()*F[i];
+		PORG[node] = PORG[node] + nodeContainer[nodeNum]->getPorosity()*F[i];
 		PITERG = PITERG + nodeContainer[nodeNum]->getPITER()*F[i];
 		UITERG = UITERG + nodeContainer[nodeNum]->getUITER()*F[i];
 		CNUBG = CNUBG + nodeContainer[nodeNum]->getCNUB()*F[i];
 	}
 
-	RHOG = RHOW0 + DRWDU*(UITERG - URHOW0);
-	VISCG = VISC0;
+	RHOG[node] = RHOW0 + DRWDU*(UITERG - URHOW0);
+	VISCG[node] = VISC0;
 
 	if ((IUNSAT - 2) == 0){
 		if (PITERG < 0){
@@ -5122,10 +5193,10 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 		SWG = 1.0;
 		RELKG = 1.0;
 	}
-	SWTG = RELKTG = RELKBG = SWBG = 0;
-	BUBSAT(SWBG, RELKBG, PITERG, CNUBG, RELKTG, SWTG, SWG, RELKG);
+	RELKBG = SWBG = 0;
+	BUBSAT(SWBG, RELKBG, PITERG, CNUBG, RELKTG[node], SWTG[node], SWG, RELKG);
 
-	DENOM = 1.0 / (PORG*SWTG*VISCG);
+	DENOM = 1.0 / (PORG[node]*SWTG[node] * VISCG[node]);
 	PGX = DPDXG - RGXGM1;
 	PGY = DPDYG - RGYGM1;
 	PGZ = DPDZG - RGZGM1;
@@ -5143,14 +5214,11 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 			PGZ = 0.0;
 	}
 
-	VXG = -DENOM*(elementContainer[el]->getPERMXX()*PGX + elementContainer[el]->getPERMXY()*PGY + elementContainer[el]->getPERMXZ()*PGZ)*RELKTG;
-	VYG = -DENOM*(elementContainer[el]->getPERMYX()*PGX + elementContainer[el]->getPERMYY()*PGY + elementContainer[el]->getPERMYZ()*PGZ)*RELKTG;
-	VZG = -DENOM*(elementContainer[el]->getPERMZX()*PGX + elementContainer[el]->getPERMZY()*PGY + elementContainer[el]->getPERMZZ()*PGZ)*RELKTG;
-	VGMAG = sqrt(VXG*VXG + VYG*VYG + VZG*VZG);
-	elementContainer[el]->putIntoVGMAG(node, VGMAG);
-	elementContainer[el]->putIntoVXG(node, VXG);
-	elementContainer[el]->putIntoVYG(node, VYG);
-	elementContainer[el]->putIntoVZG(node, VZG);
+	VXG[node] = -DENOM*(elementContainer[el]->getPERMXX()*PGX + elementContainer[el]->getPERMXY()*PGY + elementContainer[el]->getPERMXZ()*PGZ)*RELKTG[node];
+	VYG[node] = -DENOM*(elementContainer[el]->getPERMYX()*PGX + elementContainer[el]->getPERMYY()*PGY + elementContainer[el]->getPERMYZ()*PGZ)*RELKTG[node];
+	VZG[node] = -DENOM*(elementContainer[el]->getPERMZX()*PGX + elementContainer[el]->getPERMZY()*PGY + elementContainer[el]->getPERMZZ()*PGZ)*RELKTG[node];
+	VGMAG[node] = sqrt(VXG[node] * VXG[node] + VYG[node] * VYG[node] + VZG[node] * VZG[node]);
+	
 
 	if ((UP > (1E-6)) && (NOUMAT == 0))
 		goto ASYM;
@@ -5165,9 +5233,9 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 
 ASYM:
 	//CALCULATE FLUID VELOCITIES WITH RESPECT TO LOCAL COORDINATES,VXL, VYL, VZL, AND VLMAG, AT THIS LOCATION, (XLOC, YLOC, ZLOC).
-	VXL = iCJm(0, 0)*VXG + iCJm(0, 1)*VYG + iCJm(0, 2)*VZG;
-	VYL = iCJm(1, 0)*VXG + iCJm(1, 1)*VYG + iCJm(1, 2)*VZG;
-	VZL = iCJm(2, 0)*VXG + iCJm(2, 1)*VYG + iCJm(2, 2)*VZG;
+	VXL = iCJm(0, 0)*VXG[node] + iCJm(0, 1)*VYG[node] + iCJm(0, 2)*VZG[node];
+	VYL = iCJm(1, 0)*VXG[node] + iCJm(1, 1)*VYG[node] + iCJm(1, 2)*VZG[node];
+	VZL = iCJm(2, 0)*VXG[node] + iCJm(2, 1)*VYG[node] + iCJm(2, 2)*VZG[node];
 	VLMAG = sqrt(VXL*VXL + VYL*VYL + VZL*VZL);
 
 
@@ -5290,12 +5358,12 @@ void ControlParameters::BUBSAT(double& SWBG, double&  RELKBG, double  PITERG, do
 
 void ControlParameters::createSolverMatrix(){
 	if (KSOLVP == 0){ // Direct Solver
-		PMAT << MatrixXd::Zero(NELT, NBI);
-		UMAT << MatrixXd::Zero(NELT, NBI);
-		PPVEC << VectorXd::Zero(NNVEC);
-		UUVEC << VectorXd::Zero(NNVEC);
-		FWK << VectorXd::Zero(1);
-		IWK << VectorXd::Zero(1);
+		PMAT = MatrixXd::Zero(NELT, NBI);
+		UMAT =MatrixXd::Zero(NELT, NBI);
+		PPVEC = VectorXd::Zero(NNVEC);
+		UUVEC = VectorXd::Zero(NNVEC);
+		FWK = VectorXd::Zero(1);
+		IWK = VectorXd::Zero(1);
 	}
 	else{
 
@@ -5306,12 +5374,12 @@ void ControlParameters::createSolverMatrix(){
 		NWI = max(NWIP, NWIU);
 		NWF = max(NWFP, NWFU);
 
-		PMAT << MatrixXd::Zero(NELT, 1);
-		UMAT << MatrixXd::Zero(NELT, 1);
-		PPVEC << VectorXd::Zero(NNVEC);
-		UUVEC << VectorXd::Zero(NNVEC);
-		FWK << VectorXd::Zero(NWF);
-		IWK << VectorXd::Zero(NWI);
+		PMAT = MatrixXd::Zero(NELT, 1);
+		UMAT = MatrixXd::Zero(NELT, 1);
+		PPVEC = VectorXd::Zero(NNVEC);
+		UUVEC = VectorXd::Zero(NNVEC);
+		FWK = VectorXd::Zero(NWF);
+		IWK = VectorXd::Zero(NWI);
 
 	}
 }

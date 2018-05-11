@@ -244,80 +244,80 @@ void Element::putIntoDET(int ind, double DET){
 	this->DET[ind] = DET;
 }
 
-void Element::setF(double ** F){ this->F = F; for (int i = 0; i < 8; i++){ this->F[i] = new double[8]; } }
-void Element::setW(double ** W){ this->W = W; for (int i = 0; i < 8; i++){ this->W[i] = new double[8]; } }
-void Element::setDWDXG(double ** DWDXG){ this->DWDXG = DWDXG; for (int i = 0; i < 8; i++){ this->DWDXG[i] = new double[8]; } }
-void Element::setDWDYG(double ** DWDYG){ this->DWDYG = DWDYG; for (int i = 0; i < 8; i++){ this->DWDYG[i] = new double[8]; } }
-void Element::setDWDZG(double ** DWDZG){ this->DWDZG = DWDZG; for (int i = 0; i < 8; i++){ this->DWDZG[i] = new double[8]; } }
-void Element::setDFDXG(double ** DFDXG){ this->DFDXG = DFDXG; for (int i = 0; i < 8; i++){ this->DFDXG[i] = new double[8]; } }
-void Element::setDFDYG(double ** DFDYG){ this->DFDYG = DFDYG; for (int i = 0; i < 8; i++){ this->DFDYG[i] = new double[8]; } }
-void Element::setDFDZG(double ** DFDZG){ this->DFDZG = DFDZG; for (int i = 0; i < 8; i++){ this->DFDZG[i] = new double[8]; } }
-void Element::setVXG(double *VXG){this->VXG = VXG;}
-void Element::setVYG(double *VYG){this->VYG = VYG;}
-void Element::setVZG(double *VZG){this->VZG = VZG;}
-void Element::setSWG(double *SWG){this->SWG = SWG;}
-void Element::setSWTG(double *SWTG){this->SWTG = SWTG;}
-void Element::setSWBG(double *SWBG){this->SWBG = SWBG;}
-void Element::setRHOG(double *RHOG){this->RHOG = RHOG;}
-void Element::setVISCG(double *VISCG){this->VISCG = VISCG;}
-void Element::setPORG(double *PORG){this->PORG = PORG;}
-void Element::setVGMAG(double *VGMAG){this->VGMAG =VGMAG ;}
-void Element::setCNUBG(double *CNUBG){this->CNUBG =CNUBG ;}
-void Element::setRGXG(double *RGXG){this->RGXG =RGXG ;}
-void Element::setRGYG(double *RGYG){this->RGYG =RGYG ;}
-void Element::setRGZG(double *RGZG){this->RGZG =RGZG ;}
-void Element::setRELKG(double *RELKG){this->RELKG = RELKG;}
-void Element::setRELKTG(double *RELKTG){this->RELKTG =RELKTG ;}
-void Element::setRELKBG(double *RELKBG){this->RELKBG =RELKBG ;}
-
-void Element::putIntoF(int ind, int jnd, double  F){ this->F[ind][jnd] = F; }
-void Element::putIntoW(int ind, int jnd, double  W){ this->W[ind][jnd] = W; }
-void Element::putIntoDWDXG(int ind,int jnd, double  DWDXG){ this->DWDXG[ind][jnd] = DWDXG; }
-void Element::putIntoDWDYG(int ind, int jnd, double  DWDYG){ this->DWDYG[ind][jnd] = DWDYG; }
-void Element::putIntoDWDZG(int ind, int jnd, double  DWDZG){ this->DWDZG[ind][jnd] = DWDZG; }
-void Element::putIntoDFDXG(int ind,int jnd, double  DFDXG){this->DFDXG[ind][jnd] = DFDXG;}
-void Element::putIntoDFDYG(int ind, int jnd, double  DFDYG){ this->DFDYG[ind][jnd] = DFDYG; }
-void Element::putIntoDFDZG(int ind, int jnd, double DFDZG){ this->DFDZG[ind][jnd] = DFDZG; }
-void Element::putIntoVXG(int ind, double VXG){this->VXG[ind] = VXG;}
-void Element::putIntoVYG(int ind, double VYG){this->VYG[ind] = VYG;}
-void Element::putIntoVZG(int ind, double VZG){this->VZG[ind] = VZG;}
-void Element::putIntoSWG(int ind, double SWG){this->SWG[ind] = SWG;}
-void Element::putIntoSWTG(int ind, double SWTG){this->SWTG[ind] = SWTG;}
-void Element::putIntoSWBG(int ind, double SWBG){this->SWBG[ind] = SWBG;}
-void Element::putIntoRHOG(int ind, double RHOG){this->RHOG[ind] = RHOG;}
-void Element::putIntoVISCG(int ind, double VISCG){this->VISCG[ind] = VISCG;}
-void Element::putIntoPORG(int ind, double PORG){this->PORG[ind] = PORG;}
-void Element::putIntoVGMAG(int ind, double VGMAG){this->VGMAG[ind] = VGMAG;}
-void Element::putIntoCNUBG(int ind, double CNUBG){ this->CNUBG[ind] = CNUBG; }
-void Element::putIntoRGXG(int ind, double RGXG){this->RGXG[ind] = RGXG;}
-void Element::putIntoRGYG(int ind, double RGYG){this->RGYG[ind] = RGYG;}
-void Element::putIntoRGZG(int ind, double RGZG){this->RGZG[ind] = RGZG;}
-void Element::putIntoRELKG(int ind, double RELKG){this->RELKG[ind] = RELKG;}
-void Element::putIntoRELKTG(int ind, double RELKTG){this->RELKTG[ind] = RELKTG;}
-void Element::putIntoRELKBG(int ind, double RELKBG){this->RELKBG[ind] = RELKBG;}
-
-double ** Element::getF(){return this->F;}
-double ** Element::getW(){return this->W;}
-double ** Element::getDWDXG(){return this->DWDXG;}
-double ** Element::getDWDYG(){return this->DWDYG;}
-double ** Element::getDWDZG(){return this->DWDZG;}
-double ** Element::getDFDXG(){return this->DFDXG;}
-double ** Element::getDFDYG(){return this->DFDYG;}
-double ** Element::getDFDZG(){return this->DFDZG;}
-double * Element::getVXG(){return this->VXG;}
-double * Element::getVYG(){return this->VYG;}
-double * Element::getVZG(){return this->VZG;}
-double * Element::getSWG(){return this->SWG;}
-double * Element::getSWTG(){return this->SWTG;}
-double * Element::getSWBG(){return this->SWBG;}
-double * Element::getRHOG(){return this->RHOG;}
-double * Element::getVISCG(){return this->VISCG;}
-double * Element::getPORG(){return this->PORG;}
-double * Element::getVGMAG(){return this->VGMAG;}
-double * Element::getCNUBG(){return this->CNUBG;}
-double * Element::getRGXG(){return this->RGXG;}
-double * Element::getRGYG(){return this->RGYG;}
-double * Element::getRGZG(){return this->RGZG;}
-double * Element::getRELKG(){return this->RELKG;}
-double * Element::getRELKTG(){return this->RELKTG;}
-double * Element::getRELKBG(){return this->RELKBG;}
+//void Element::setF(double ** F){ this->F = F; for (int i = 0; i < 8; i++){ this->F[i] = new double[8]; } }
+//void Element::setW(double ** W){ this->W = W; for (int i = 0; i < 8; i++){ this->W[i] = new double[8]; } }
+//void Element::setDWDXG(double ** DWDXG){ this->DWDXG = DWDXG; for (int i = 0; i < 8; i++){ this->DWDXG[i] = new double[8]; } }
+//void Element::setDWDYG(double ** DWDYG){ this->DWDYG = DWDYG; for (int i = 0; i < 8; i++){ this->DWDYG[i] = new double[8]; } }
+//void Element::setDWDZG(double ** DWDZG){ this->DWDZG = DWDZG; for (int i = 0; i < 8; i++){ this->DWDZG[i] = new double[8]; } }
+//void Element::setDFDXG(double ** DFDXG){ this->DFDXG = DFDXG; for (int i = 0; i < 8; i++){ this->DFDXG[i] = new double[8]; } }
+//void Element::setDFDYG(double ** DFDYG){ this->DFDYG = DFDYG; for (int i = 0; i < 8; i++){ this->DFDYG[i] = new double[8]; } }
+//void Element::setDFDZG(double ** DFDZG){ this->DFDZG = DFDZG; for (int i = 0; i < 8; i++){ this->DFDZG[i] = new double[8]; } }
+//void Element::setVXG(double *VXG){this->VXG = VXG;}
+//void Element::setVYG(double *VYG){this->VYG = VYG;}
+//void Element::setVZG(double *VZG){this->VZG = VZG;}
+//void Element::setSWG(double *SWG){this->SWG = SWG;}
+//void Element::setSWTG(double *SWTG){this->SWTG = SWTG;}
+//void Element::setSWBG(double *SWBG){this->SWBG = SWBG;}
+//void Element::setRHOG(double *RHOG){this->RHOG = RHOG;}
+//void Element::setVISCG(double *VISCG){this->VISCG = VISCG;}
+//void Element::setPORG(double *PORG){this->PORG = PORG;}
+//void Element::setVGMAG(double *VGMAG){this->VGMAG =VGMAG ;}
+//void Element::setCNUBG(double *CNUBG){this->CNUBG =CNUBG ;}
+//void Element::setRGXG(double *RGXG){this->RGXG =RGXG ;}
+//void Element::setRGYG(double *RGYG){this->RGYG =RGYG ;}
+//void Element::setRGZG(double *RGZG){this->RGZG =RGZG ;}
+//void Element::setRELKG(double *RELKG){this->RELKG = RELKG;}
+//void Element::setRELKTG(double *RELKTG){this->RELKTG =RELKTG ;}
+//void Element::setRELKBG(double *RELKBG){this->RELKBG =RELKBG ;}
+//
+//void Element::putIntoF(int ind, int jnd, double  F){ this->F[ind][jnd] = F; }
+//void Element::putIntoW(int ind, int jnd, double  W){ this->W[ind][jnd] = W; }
+//void Element::putIntoDWDXG(int ind,int jnd, double  DWDXG){ this->DWDXG[ind][jnd] = DWDXG; }
+//void Element::putIntoDWDYG(int ind, int jnd, double  DWDYG){ this->DWDYG[ind][jnd] = DWDYG; }
+//void Element::putIntoDWDZG(int ind, int jnd, double  DWDZG){ this->DWDZG[ind][jnd] = DWDZG; }
+//void Element::putIntoDFDXG(int ind,int jnd, double  DFDXG){this->DFDXG[ind][jnd] = DFDXG;}
+//void Element::putIntoDFDYG(int ind, int jnd, double  DFDYG){ this->DFDYG[ind][jnd] = DFDYG; }
+//void Element::putIntoDFDZG(int ind, int jnd, double DFDZG){ this->DFDZG[ind][jnd] = DFDZG; }
+//void Element::putIntoVXG(int ind, double VXG){this->VXG[ind] = VXG;}
+//void Element::putIntoVYG(int ind, double VYG){this->VYG[ind] = VYG;}
+//void Element::putIntoVZG(int ind, double VZG){this->VZG[ind] = VZG;}
+//void Element::putIntoSWG(int ind, double SWG){this->SWG[ind] = SWG;}
+//void Element::putIntoSWTG(int ind, double SWTG){this->SWTG[ind] = SWTG;}
+//void Element::putIntoSWBG(int ind, double SWBG){this->SWBG[ind] = SWBG;}
+//void Element::putIntoRHOG(int ind, double RHOG){this->RHOG[ind] = RHOG;}
+//void Element::putIntoVISCG(int ind, double VISCG){this->VISCG[ind] = VISCG;}
+//void Element::putIntoPORG(int ind, double PORG){this->PORG[ind] = PORG;}
+//void Element::putIntoVGMAG(int ind, double VGMAG){this->VGMAG[ind] = VGMAG;}
+//void Element::putIntoCNUBG(int ind, double CNUBG){ this->CNUBG[ind] = CNUBG; }
+//void Element::putIntoRGXG(int ind, double RGXG){this->RGXG[ind] = RGXG;}
+//void Element::putIntoRGYG(int ind, double RGYG){this->RGYG[ind] = RGYG;}
+//void Element::putIntoRGZG(int ind, double RGZG){this->RGZG[ind] = RGZG;}
+//void Element::putIntoRELKG(int ind, double RELKG){this->RELKG[ind] = RELKG;}
+//void Element::putIntoRELKTG(int ind, double RELKTG){this->RELKTG[ind] = RELKTG;}
+//void Element::putIntoRELKBG(int ind, double RELKBG){this->RELKBG[ind] = RELKBG;}
+//
+//double ** Element::getF(){return this->F;}
+//double ** Element::getW(){return this->W;}
+//double ** Element::getDWDXG(){return this->DWDXG;}
+//double ** Element::getDWDYG(){return this->DWDYG;}
+//double ** Element::getDWDZG(){return this->DWDZG;}
+//double ** Element::getDFDXG(){return this->DFDXG;}
+//double ** Element::getDFDYG(){return this->DFDYG;}
+//double ** Element::getDFDZG(){return this->DFDZG;}
+//double * Element::getVXG(){return this->VXG;}
+//double * Element::getVYG(){return this->VYG;}
+//double * Element::getVZG(){return this->VZG;}
+//double * Element::getSWG(){return this->SWG;}
+//double * Element::getSWTG(){return this->SWTG;}
+//double * Element::getSWBG(){return this->SWBG;}
+//double * Element::getRHOG(){return this->RHOG;}
+//double * Element::getVISCG(){return this->VISCG;}
+//double * Element::getPORG(){return this->PORG;}
+//double * Element::getVGMAG(){return this->VGMAG;}
+//double * Element::getCNUBG(){return this->CNUBG;}
+//double * Element::getRGXG(){return this->RGXG;}
+//double * Element::getRGYG(){return this->RGYG;}
+//double * Element::getRGZG(){return this->RGZG;}
+//double * Element::getRELKG(){return this->RELKG;}
+//double * Element::getRELKTG(){return this->RELKTG;}
+//double * Element::getRELKBG(){return this->RELKBG;}
