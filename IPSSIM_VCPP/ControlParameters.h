@@ -9,6 +9,7 @@
 #include <functional>
 #include <time.h>
 #include <chrono>
+#include <unordered_set>
 #include <thread>
 #include "InputFiles.h"
 #include "Layer.h"
@@ -522,13 +523,14 @@ public:
 	void ELEMN2();
 	void NODAL();
 	void BC();
-	void BASIS3(int ICALL,int el, int node,int realNode, double XLOC, double YLOC, double ZLOC);
+	void BASIS3(int ICALL,int el, int node,int realNode, double XLOC, double YLOC, double ZLOC,double &PORGT);
 	void UNSAT(double& SW, double& DSWDP, double& RELK, double PRES, double KREG);
 	void BUBSAT(double& SWBG, double&  RELKBG, double  PITERG, double  CNUBG, double&  RELKTG, double& SWTG, double SWG, double  RELKG);
 	void GLOCOL();
 	void GLOBAN();
 	void createSolverMatrix();
 	void DIMWRK(int KSOLVR,int NSAVE,int& NWI, int& NWF);
+	void alpayPTR();
 	MatrixXd PMAT;
 	MatrixXd UMAT;
 	VectorXd FWK;
@@ -538,7 +540,9 @@ public:
 	VectorXd IA;
 	VectorXd JA;
 	
-
+	void setITERPARAMS1();
+	void setITERPARAMS2();
+	void setITERPARAMS3();
 private:
 	double VXG[8] ;
 	double VYG[8] ;
@@ -551,18 +555,19 @@ private:
 	double RGXG[8] ;
 	double RGYG[8] ;
 	double RGZG[8] ;
-	double DWDXG[8] ;
-	double DWDYG[8] ;
-	double DWDZG[8] ;
-	double DFDXG[8] ;
-	double DFDYG[8] ;
-	double DFDZG[8] ;
-	double F[8] ;
-	double W[8];
+	vector<vector<double>> DWDXG;
+	vector<vector<double>> DWDYG;
+	vector<vector<double>> DWDZG;
+	vector<vector<double>> DFDXG;
+	vector<vector<double>> DFDYG;
+	vector<vector<double>> DFDZG;
+	vector<vector<double>> F;
+	vector<vector<double>> W;
 	double PORG[8];
-	void DISPR3(int i, int el, double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG, double& DZXG, double& DZYG, double& DZZG);
-
-
+	void DISPR3(int i, int el,double VX,double VY,double VZ,double VMAG, double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG, double& DZXG, double& DZYG, double& DZZG);
+	void ROTATE(vector<vector<double>> rotMat, double v1, double v2, double v3, double& vr1, double& vr2, double& vr3);
+	void TENSYM(double DL, double DT1, double DT2, double VNX, double UNX, double WNX,double VNY, double UNY, double WNY, double VNZ, double UNZ, double WNZ,
+		double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG,double&DZXG, double& DZYG, double& DZZG);
 	int NL, NWI, NWF;
 	double DELTLC, RELCHG,TELAPS;
 	int NOUMAT;
@@ -625,9 +630,9 @@ private:
 	int NSAVEU;
 
 	/* Mesh and Coordinate Data*/
-	float GRAVX; // x-component of gravity vector
-	float GRAVY; // y-component of gravity vector
-	float GRAVZ; // z-component of gravity vector
+	double GRAVX; // x-component of gravity vector
+	double GRAVY; // y-component of gravity vector
+	double GRAVZ; // z-component of gravity vector
 	// x,y,z coordinates of all noted in the mesh is in node object
 	string MSHSTR = ""; // Mesh Structure 
 	// "2D IRREGULAR"
@@ -678,9 +683,9 @@ private:
 
 	/* TRANSPORT Parameters */
 	//ALMAX, ALMID,ALMIN,ATMAX,ATMID,ATMIN are in element object
-	double SIGMAW = 0; // for energy transport : fluid thermal conductivity
+	double SIGMAW; // for energy transport : fluid thermal conductivity
 	// for solute transport : molecular diffusivity of solute in fluid
-	double SIGMAS = 0; // for energy transport : solid grain thermal conductivity (equals zero for solute transport)
+	double SIGMAS; // for energy transport : solid grain thermal conductivity (equals zero for solute transport)
 	double CW = 0;     // for energy transport : fluuid specific heat capacity ( equals one for solute transport)
 	double CS = 0;     // for energy transport : solid grain specific heat capacity ( not specified in input data for solute transport)
 	double RHOS = 0;   // density of a solid grain in the solid matrix;
@@ -849,5 +854,6 @@ private:
 	
 	int INTIM = 0;
 	int ISTOP = 0;
+	vector<vector<int>> nodeNeighbors;
 };
 #endif

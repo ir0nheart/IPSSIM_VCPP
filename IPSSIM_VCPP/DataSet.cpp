@@ -519,6 +519,7 @@ void DataSet::parseDataSet_6(){
 	if (CP->getISSTRA() == 1){
 		CP->setTSTART(TICS);
 		double DELT = max((1 - abs(TICS)), 1.0);
+		CP->setDELT(DELT);
 		CP->setNSCH(1 + CP->getNSCHAU());
 		double TIME = TICS;
 		double STEP = 0.0;
@@ -859,6 +860,7 @@ void DataSet::parseDataSet_6(){
 		int lastind = TIME_STEPS->getSList().size() - 1;
 		CP->setTFINISH(TREF + TIME_STEPS->getSList()[lastind].first);
 		CP->setITMAX(TIME_STEPS->getSList().size() - 1);
+		CP->setDELT(TIME_STEPS->getSList()[1].first - TIME_STEPS->getSList()[0].first);
 	double TIME;
 	//define STEP_0
 		TimeCycleSch * step_0 = new TimeCycleSch();
@@ -1582,7 +1584,7 @@ void DataSet::parseDataSet_12_13_14A(){
 
 	CP->setCS(0.0);
 	CP->setCW(1.0);
-	CP->setSIGMAW(0.0);
+	CP->setSIGMAS(0.0);
 
 	logWriter->writeContainer.push_back(logLine);
 	logLine.clear();
@@ -1590,10 +1592,12 @@ void DataSet::parseDataSet_12_13_14A(){
 	if (CP->getKTYPE(0) == 3){
 		line = lines[1];
 		dataPos.clear();
-		boost::split(dataPos, line, boost::is_any_of(" ,\r"), boost::token_compress_on);
+		boost::split(dataPos, line, boost::is_any_of(" ,\n"), boost::token_compress_on);
 		CP->setGRAVX(stod(dataPos.at(0)));
 		CP->setGRAVY(stod(dataPos.at(1)));
-		CP->setGRAVZ(stod(dataPos.at(2)));
+		double x = (stod(dataPos.at(2))*1000);
+		int perm = (int)x;
+		CP->setGRAVZ(x/1000);
 		logLine.append("\n\n\n\n           C O O R D I N A T E   O R I E N T A T I O N   T O   G R A V I T Y\n\n");
 		logLine.append("             COMPONENT OF GRAVITY VECTOR\n");
 		logLine.append("             IN +X DIRECTION, GRAVX\n");

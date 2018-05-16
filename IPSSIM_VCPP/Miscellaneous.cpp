@@ -12,6 +12,7 @@ Miscellaneous::Miscellaneous()
 void Miscellaneous::spacer(){
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 255);
 	cout << setw(80) << setfill('-') << "" << endl;
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 15);
 }
 
 void Miscellaneous::banner(){

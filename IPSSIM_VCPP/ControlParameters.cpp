@@ -3250,7 +3250,8 @@ void ControlParameters::loadInitialConditions(){
 		}
 
 		
-
+		DELTP = DELT*1.e16;
+		DELTU = DELT*1.e16;
 
 	}
 	else{
@@ -4758,6 +4759,21 @@ void ControlParameters::BCSTEP(){
 
 void ControlParameters::ELEMN3(){
  // Too Much to Do
+
+	for (int i = 0; i < 8; i++){
+		vector<double> vec;
+		for (int j = 0; j < 8; j++){
+			vec.push_back(0);	
+		}
+		F.push_back(vec);
+		W.push_back(vec);
+		DWDXG.push_back(vec);
+		DWDYG.push_back(vec);
+		DWDZG.push_back(vec);
+		DFDXG.push_back(vec);
+		DFDYG.push_back(vec);
+		DFDZG.push_back(vec);
+	}
 	double GLOC = 0.577350269189626;
 	// Decide Whether to Calculate Centroid velocities on this call
 	double GXLOC[8] = { -1, 1, 1, -1, -1, 1, 1, -1 };
@@ -4781,7 +4797,7 @@ void ControlParameters::ELEMN3(){
 			for (int el = 1; el <= NE; el++){
 				int * elNodes = elementContainer[el]->getElementNodes();
 				for (int nn = 0; nn < 8; nn++){
-					BASIS3(0,el,nn, elNodes[nn], GXLOC[nn], GYLOC[nn], GZLOC[nn]);
+					BASIS3(0,el,nn, elNodes[nn], GXLOC[nn], GYLOC[nn], GZLOC[nn],PORG[nn]);
 					if (elementContainer[el]->getDET()[nn] <= 0){
 						ISTOP = ISTOP + 1;
 						string logLine = "";
@@ -4807,11 +4823,22 @@ void ControlParameters::ELEMN3(){
 		//LOOP THROUGH ALL ELEMENTS TO CARRY OUT SPATIAL INTEGRATION OF FLUX TERMS IN P AND / OR U EQUATIONS
 
 		for (int el = 1; el <= NE; el++){
-			double VOLE[8] = {};
+			double VOLE[8] = {0};
 			double DFLOWE[8] = {};
 			double BFLOWE[8][8] = {};
 			double BTRANE[8][8];
 			double DTRANE[8][8];
+			double RDDFJX, RDDFJY, RDDFJZ;
+			for (int i = 0; i < 8; i++){
+				VOLE[i] = 0;
+				DFLOWE[i] = 0;
+				for (int j = 0; j < 8; j++){
+
+					BFLOWE[i][j] = 0;
+					BTRANE[i][j] = 0;
+					DTRANE[i][j] = 0;
+				}
+			}
 			double XIX, YIY, ZIZ;
 			XIX = YIY = ZIZ = -1.0;
 			double XLOC, YLOC, ZLOC;
@@ -4822,7 +4849,7 @@ void ControlParameters::ELEMN3(){
 						XLOC = XIX*GLOC;
 						YLOC = YIY*GLOC;
 						ZLOC = ZIZ*GLOC;
-						BASIS3(1, el, KG, elementContainer[el]->getElementNodes()[KG], XLOC, YLOC, ZLOC);
+						BASIS3(1, el, KG, elementContainer[el]->getElementNodes()[KG], XLOC, YLOC, ZLOC,PORG[KG]);
 						XIX = -XIX;
 						KG = KG++;
 					}
@@ -4873,16 +4900,13 @@ void ControlParameters::ELEMN3(){
 				}
 
 				
+				if (!(UP <= 1e-6)){
 
-				
-				
+
 					for (int i = 0; i < 8; i++){
 						double RXXGD, RXYGD, RXZGD, RYXGD, RYYGD, RYZGD, RZXGD, RZYGD, RZZGD;
 						double DET = elementContainer[el]->getDET()[i];
 						double RDRX, RDRY, RDRZ;
-					
-					
-	
 						RXXGD = RXXG[i] * DET;
 						RXYGD = RXYG[i] * DET;
 						RXZGD = RXZG[i] * DET;
@@ -4897,27 +4921,62 @@ void ControlParameters::ELEMN3(){
 						RDRZ = RZXGD * RGXG[i] + RZYGD*RGYG[i] + RZZGD*RGZG[i];
 
 						for (int j = 0; j < 8; j++){
-							VOLE[j] = VOLE[j] + F[j] * DET;
-							DFLOWE[j] = DFLOWE[j] + RDRX*DWDXG[j] + RDRY*DWDYG[j] + RDRZ*DWDZG[j];
+							VOLE[j] = VOLE[j] + F[i][j] * DET;
+							DFLOWE[j] = DFLOWE[j] + RDRX*DWDXG[i][j] + RDRY*DWDYG[i][j] + RDRZ*DWDZG[i][j];
 
 						}
-						double RDDFJX, RDDFJY, RDDFJZ;
+						
 						for (int j = 0; j < 8; j++){
-							RDDFJX = RXXGD*DFDXG[j] + RXYGD*DFDYG[j] + RXZGD*DFDZG[j];
-							RDDFJY = RYXGD*DFDXG[j] + RYYGD*DFDYG[j] + RYZGD*DFDZG[j];
-							RDDFJZ = RZXGD*DFDXG[j] + RZYGD*DFDYG[j] + RZZGD*DFDZG[j];
+							RDDFJX = RXXGD*DFDXG[i][j] + RXYGD*DFDYG[i][j] + RXZGD*DFDZG[i][j];
+							RDDFJY = RYXGD*DFDXG[i][j] + RYYGD*DFDYG[i][j] + RYZGD*DFDZG[i][j];
+							RDDFJZ = RZXGD*DFDXG[i][j] + RZYGD*DFDYG[i][j] + RZZGD*DFDZG[i][j];
 							for (int k = 0; k < 8; k++){
-								BFLOWE[j][k] = BFLOWE[j][k] + DWDXG[k] * RDDFJX + DWDYG[k] * RDDFJY + DWDZG[k] * RDDFJZ;
+								BFLOWE[i][k] = BFLOWE[i][k] + DWDXG[i][k] * RDDFJX + DWDYG[i][k] * RDDFJY + DWDZG[i][k] * RDDFJZ;
 							}
 						}
 					}
+				}
+				else{
+					for (int i = 0; i < 8; i++){
+						double RXXGD, RXYGD, RXZGD, RYXGD, RYYGD, RYZGD, RZXGD, RZYGD, RZZGD;
+						double DET = elementContainer[el]->getDET()[i];
+						double RDRX, RDRY, RDRZ;
+						RXXGD = RXXG[i] * DET;
+						RXYGD = RXYG[i] * DET;
+						RXZGD = RXZG[i] * DET;
+						RYXGD = RYXG[i] * DET;
+						RYYGD = RYYG[i] * DET;
+						RYZGD = RYZG[i] * DET;
+						RZXGD = RZXG[i] * DET;
+						RZYGD = RZYG[i] * DET;
+						RZZGD = RZZG[i] * DET;
+						RDRX = RXXGD * RGXG[i] + RXYGD*RGYG[i] + RXZGD*RGZG[i];
+						RDRY = RYXGD * RGXG[i] + RYYGD*RGYG[i] + RYZGD*RGZG[i];
+						RDRZ = RZXGD * RGXG[i] + RZYGD*RGYG[i] + RZZGD*RGZG[i];
+
+						for (int j = 0; j < 8; j++){
+							VOLE[j] = VOLE[j] + F[i][j] * DET;
+							DFLOWE[j] = DFLOWE[j] + RDRX*DFDXG[i][j] + RDRY*DFDYG[i][j] + RDRZ*DFDZG[i][j];
+
+						}
+						
+						for (int j = 0; j < 8; j++){
+							RDDFJX = RXXGD*DFDXG[i][j] + RXYGD*DFDYG[i][j] + RXZGD*DFDZG[i][j];
+							RDDFJY = RYXGD*DFDXG[i][j] + RYYGD*DFDYG[i][j] + RYZGD*DFDZG[i][j];
+							RDDFJZ = RZXGD*DFDXG[i][j] + RZYGD*DFDYG[i][j] + RZZGD*DFDZG[i][j];
+							for (int k = 0; k < 8; k++){
+								BFLOWE[j][k] = BFLOWE[j][k] + DFDXG[i][k] * RDDFJX + DFDYG[i][k] * RDDFJY + DFDZG[i][k] * RDDFJZ;
+							}
+						}
+					}
+				}
 
 				
 			}
 			if ((ML - 1) != 0){
 				if (NOUMAT != 1){
-					double BXXG[8] = {}, BXYG[8] = {}, BXZG[8] = {}, BYXG[8] = {}, BYYG[8] = {}, BYZG[8] = {}, BZXG[8] = {}, BZYG[8] = {}, BZZG[8] = {};
-					double EXG[8] = {}, EYG[8] = {}, EZG[8] = {};
+					double BXXG[8] = {0}, BXYG[8] = {0}, BXZG[8] = {0}, BYXG[8] = {0}, BYYG[8] = {0}, BYZG[8] = {0}, BZXG[8] = {0}, BZYG[8] = {0}, BZZG[8] = {0};
+					double EXG[8] = {0}, EYG[8] = {0}, EZG[8] = {0};
 					for (int i = 0; i < 8; i++){
 						double ESWG = PORG[i] * SWTG[i];
 						double RHOCWG = RHOG[i] * CW;
@@ -4944,7 +5003,7 @@ void ControlParameters::ELEMN3(){
 							EXG[i] = ESRCG*VXG[i];
 							EYG[i] = ESRCG*VYG[i];
 							EZG[i] = ESRCG*VZG[i];
-							DISPR3(i,el,DXXG,DXYG,DXZG,DYXG,DYYG,DYZG,DZXG,DZYG,DZZG);
+							DISPR3(i,el,VXG[i],VYG[i],VZG[i],VGMAG[i],DXXG,DXYG,DXZG,DYXG,DYYG,DYZG,DZXG,DZYG,DZZG);
 						}
 
 						ESE = ESRCG * SIGMAW + (1.0 - PORG[i])*RHOCWG*SIGMAS;
@@ -4967,31 +5026,31 @@ void ControlParameters::ELEMN3(){
 						}
 					}
 
-					for (int i = 0; i < 8; i++){
+					for (int k = 0; k < 8; k++){
 						double BXXGD, BXYGD, BXZGD, BYXGD, BYYGD, BYZGD, BZXGD, BZYGD, BZZGD;
 						double EXGD, EYGD, EZGD;
 						double BDDFJX, BDDFJY, BDDFJZ, EDDFJ;
-						double DET = elementContainer[el]->getDET()[i];
-						BXXGD = BXXG[i] * DET;
-						BXYGD = BXYG[i] * DET;
-						BXZGD = BXZG[i] * DET;
-						BYXGD = BYXG[i] * DET;
-						BYYGD = BYYG[i] * DET;
-						BYZGD = BYZG[i] * DET;
-						BZXGD = BZXG[i] * DET;
-						BZYGD = BZYG[i] * DET;
-						BZZGD = BZZG[i] * DET;
-						EXGD = EXG[i] * DET;
-						EYGD = EYG[i] * DET;
-						EZGD = EZG[i] * DET;
+						double DET = elementContainer[el]->getDET()[k];
+						BXXGD = BXXG[k] * DET;
+						BXYGD = BXYG[k] * DET;
+						BXZGD = BXZG[k] * DET;
+						BYXGD = BYXG[k] * DET;
+						BYYGD = BYYG[k] * DET;
+						BYZGD = BYZG[k] * DET;
+						BZXGD = BZXG[k] * DET;
+						BZYGD = BZYG[k] * DET;
+						BZZGD = BZZG[k] * DET;
+						EXGD = EXG[k] * DET;
+						EYGD = EYG[k] * DET;
+						EZGD = EZG[k] * DET;
 						for (int j = 0; j < 8; j++){
-							BDDFJX = BXXGD*DFDXG[j] + BXYGD*DFDYG[j] + BXZGD*DFDZG[j];
-							BDDFJY = BYXGD*DFDXG[j] + BYYGD*DFDYG[j] + BYZGD*DFDZG[j];
-							BDDFJZ = BZXGD*DFDXG[j] + BZYGD*DFDYG[j] + BZZGD*DFDZG[j];
-							EDDFJ = EXGD*DFDXG[j] + EYGD*DFDXG[j] + EZGD*DFDZG[j];
-							for (int k = 0; k < 8; k++){
-								BTRANE[k][j] = BTRANE[k][j] + DFDXG[k] * BDDFJX + DFDYG[k] * BDDFJY + DFDZG[k] * BDDFJZ;
-								DTRANE[k][j] = DTRANE[k][j] + EDDFJ * W[k];
+							BDDFJX = BXXGD*DFDXG[k][j] + BXYGD*DFDYG[k][j] + BXZGD*DFDZG[k][j];
+							BDDFJY = BYXGD*DFDXG[k][j] + BYYGD*DFDYG[k][j] + BYZGD*DFDZG[k][j];
+							BDDFJZ = BZXGD*DFDXG[k][j] + BZYGD*DFDYG[k][j] + BZZGD*DFDZG[k][j];
+							EDDFJ = EXGD*DFDXG[k][j] + EYGD*DFDXG[k][j] + EZGD*DFDZG[k][j];
+							for (int i = 0; i < 8; i++){
+								BTRANE[i][j] = BTRANE[i][j] + DFDXG[k][i] * BDDFJX + DFDYG[k][i] * BDDFJY + DFDZG[k][i] * BDDFJZ;
+								DTRANE[i][j] = DTRANE[i][j] + EDDFJ * W[k][i];
 							}
 						}
 					}
@@ -5001,6 +5060,47 @@ void ControlParameters::ELEMN3(){
 				}
 			}
 
+			Writer * logWriter = Writer::ELEInstance();
+			string logLine = "";
+			char buff[512];
+			_snprintf(buff, sizeof(buff), "Element %9d", el);
+			logLine.append(buff);
+			logLine.append("\nVOLE");
+			for (int i = 0; i < 8; i++){
+				
+					_snprintf(buff, sizeof(buff), "  %+14.7e", VOLE[i]);
+					logLine.append(buff);
+			}
+			for (int i = 0; i < 8; i++){
+				logLine.append("\nBFLOWE");
+				for (int j = 0; j < 8; j++){
+					_snprintf(buff, sizeof(buff), "  %+14.7e", BFLOWE[i][j]);
+					logLine.append(buff);
+				}
+			}
+			logLine.append("\nDFLOWE");
+			for (int j = 0; j < 8; j++){
+				_snprintf(buff, sizeof(buff), "  %+14.7e", DFLOWE[j]);
+				logLine.append(buff);
+			}
+
+			for (int i = 0; i < 8; i++){
+				logLine.append("\nBTRANE");
+				for (int j = 0; j < 8; j++){
+					_snprintf(buff, sizeof(buff), "  %+14.7e", BTRANE[i][j]);
+					logLine.append(buff);
+				}
+			}
+			for (int i = 0; i < 8; i++){
+				logLine.append("\nDTRANE");
+				for (int j = 0; j < 8; j++){
+					_snprintf(buff, sizeof(buff), "  %+14.7e", DTRANE[i][j]);
+					logLine.append(buff);
+				}
+			}
+
+			logWriter->writeContainer.push_back(logLine);
+		
 			if (KSOLVP == 0){
 				GLOBAN();
 			}
@@ -5013,7 +5113,208 @@ void ControlParameters::ELEMN3(){
 
 
 }
-void ControlParameters::DISPR3(int i, int el, double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG, double& DZXG, double& DZYG, double& DZZG){}
+void ControlParameters::DISPR3(int i, int el, double VX, double VY, double VZ, double VMAG, double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG, double& DZXG, double& DZYG, double& DZZG){
+	double TOLISO = 0.0000001;
+	double TOLVRT = TOLISO;
+	double TOLCIR = 0.9999999;
+	double VNX, VNY, VNZ;
+	double ALMAX, ALMID, ALMIN, ATMAX, ATMID, ATMIN;
+	double ALMXVL, ALMNVL, ATMXVL, ATMNVL;
+	bool LISO, TISO;
+	double DL,AT1,AT2;
+	
+	LISO = TISO = false;
+	ALMAX = elementContainer[el]->getALMAX();
+	ATMAX = elementContainer[el]->getATMAX();
+	ATMID = elementContainer[el]->getATMID();
+	ALMID = elementContainer[el]->getALMID();
+	ATMIN = elementContainer[el]->getATMIN();
+	ALMIN = elementContainer[el]->getALMIN();
+	double AT []= { ATMAX, ATMID, ATMIN };
+	double sortedAT[3];
+	int maxIND[3] = { 0 };
+	sort(begin(AT), end(AT));
+	for (int i = 0; i < 3; i++){
+		if (sortedAT[0] == AT[i]){
+			maxIND[0] = i;
+			break;
+		}
+	}
+	for (int i = 0; i < 3; i++){
+		if (sortedAT[1] == AT[i]){
+			maxIND[1] = i;
+			break;
+		}
+	}
+	for (int i = 0; i < 3; i++){
+		if (sortedAT[2] == AT[i]){
+			maxIND[2] = i;
+			break;
+		}
+	}
+	// Normalize The Velocity Vector
+	VNX = VX / VMAG;
+	VNY = VY / VMAG;
+	VNZ = VZ / VMAG;
+	ALMNVL = min(min(elementContainer[el]->getALMAX(), elementContainer[el]->getALMID()), elementContainer[el]->getALMIN());
+	ALMXVL = max(max(elementContainer[el]->getALMAX(), elementContainer[el]->getALMID()), elementContainer[el]->getALMIN());
+	// Determine Long Dispersivity essentialy Isotropic
+	if (ALMXVL == 0){
+		LISO = true;
+	}
+	else{
+		LISO = ((ALMXVL - ALMNVL) / ALMXVL) < TOLISO;
+	}
+
+	if (LISO){
+		DL = elementContainer[el]->getALMAX()*VMAG;
+	}
+	else{
+		vector<vector<double>> rotMat = elementContainer[el]->getRotationMatrix();
+		double VNXX, VNYY, VNZZ;
+		ROTATE(rotMat, VNX, VNY, VNZ, VNXX, VNYY, VNZZ);
+
+		DL = VMAG / (VNXX*VNXX / elementContainer[el]->getALMAX() + VNYY*VNYY / elementContainer[el]->getALMAX()+VNZZ *VNZZ / elementContainer[el]->getALMIN());
+		
+	}
+
+	ATMNVL = min(min(elementContainer[el]->getATMAX(), elementContainer[el]->getATMID()), elementContainer[el]->getATMIN());
+	ATMXVL = max(max(elementContainer[el]->getATMAX(), elementContainer[el]->getATMID()), elementContainer[el]->getATMIN());
+
+	if (ATMXVL == 0){
+		TISO = true;
+	}
+	else{
+		TISO = ((ATMXVL - ATMNVL) / ATMXVL) < TOLISO;
+	}
+	double UNX, UNY, UNZ;
+	double WNY, WNX, WNZ;
+	
+	if (TISO){
+		double TERM = 1 - VNZ*VNZ;
+		if (TERM < TOLVRT){
+			UNZ = WNX = UNY = WNZ = 0;
+			UNX = WNY = 1;
+		}
+		else{
+			double TERMH = sqrt(TERM);
+			UNX = -VNY / TERMH;
+			UNY = VNX / TERMH;
+			UNZ = 0;
+			WNX = -VNZ*UNY;
+			WNY = VNZ*UNX;
+			WNZ = TERMH;
+		}
+		AT1 = AT2 = elementContainer[el]->getATMAX();
+	}
+	else{
+		double VNXX, VNYY, VNZZ;
+		if (LISO){
+			vector<vector<double>> rotMat = elementContainer[el]->getRotationMatrix();
+			
+			ROTATE(rotMat, VNX, VNY, VNZ, VNXX, VNYY, VNZZ);
+		}
+
+		vector<pair <double, double>> ATVN;
+		ATVN.push_back(pair<double,double>(elementContainer[el]->getATMAX(), VNXX));
+		ATVN.push_back(pair<double, double>(elementContainer[el]->getATMID(), VNYY));
+		ATVN.push_back(pair<double, double>(elementContainer[el]->getATMIN(), VNZZ));
+		sort(ATVN.begin(), ATVN.end(), [](pair<double,double> v1, pair<double,double> v2){return v1.first < v2.first; });
+		//APPLY THE BIOT-FRESNEL CONSTRUCTION TO THE TRANSVERSE
+		double A2B2, A2C2, B2C2;
+		A2B2 = ATVN[0].first*ATVN[1].first;
+		A2C2 = ATVN[0].first*ATVN[2].first;
+		B2C2 = ATVN[1].first*ATVN[2].first;
+		double COS2AV, SIN2AV, SINAV, TERM1, TERM2, OA1V, OA2V,COSAV;
+		COS2AV = (A2C2 - B2C2) / (A2B2 - B2C2);
+		SIN2AV = 1 - COS2AV;
+		COSAV = sqrt(COS2AV);
+		SINAV = sqrt(SIN2AV);
+		TERM1 = COSAV * ATVN[0].second;
+		TERM2 = SINAV * ATVN[2].second;
+		OA1V = TERM1 + TERM2;
+		OA2V = TERM1 - TERM2;
+		double UNTXX, UNTYY, UNTZZ, WNTXX, WNTYY, WNTZZ;
+		double RVJ1MG, RVJ2MG, RSUM, RDIF, OAUXX, OAUZZ, OAWXX, OAWZZ, OAUV, OAWV, OAUOAU, OAWOAW, UMTERM, WMTERM;
+		if (max(abs(OA1V),abs(OA2V)) >= TOLCIR){
+			UNTXX = -ATVN[2].second;
+			UNTYY = 0;
+			UNTZZ = ATVN[0].second;
+			WNTXX = 0;
+			WNTYY = 1;
+			WNTZZ = 0;
+			AT1 = AT2 = ATVN[1].first;
+		}
+		else{
+			RVJ1MG = 1 / sqrt(1 - OA1V*OA1V);
+			RVJ2MG = 1 / sqrt(1 - OA2V * OA2V);
+			RSUM = RVJ1MG + RVJ2MG;
+			RDIF = RVJ1MG - RVJ2MG;
+			OAUXX = COSAV * RSUM;
+			OAUZZ = SINAV * RDIF;
+			OAWXX = COSAV * RDIF;
+			OAWZZ = SINAV * RSUM;
+			OAUV = OAUXX * ATVN[0].second + OAUZZ*ATVN[2].second;
+			OAWV = OAWXX * ATVN[0].second + OAWZZ*ATVN[2].second;
+			OAUOAU = OAUXX*OAUXX + OAUZZ * OAUZZ;
+			OAWOAW = OAWXX*OAWXX + OAWZZ * OAWZZ;
+			UMTERM = OAUOAU - OAUV *OAUV;
+			WMTERM = OAWOAW - OAWV * OAWV;
+			double RUMAGH, RWMAGH;
+			if (UMTERM > WMTERM){
+				RUMAGH = 1.0 / sqrt(UMTERM);
+				UNTXX = (OAUXX - OAUV *ATVN[0].second)*RUMAGH;
+				UNTYY = -OAUV*ATVN[1].second*RUMAGH;
+				UNTZZ = (OAUZZ - OAUV*ATVN[2].second)*RUMAGH;
+				WNTXX = UNTYY*ATVN[2].second - UNTZZ * ATVN[1].second;
+				WNTYY = UNTZZ*ATVN[0].second - UNTXX * ATVN[2].second;
+				WNTZZ = UNTXX*ATVN[1].second - UNTYY * ATVN[0].second;
+			}
+			else{
+				RWMAGH = 1 / sqrt(WMTERM);
+				WNTXX = (OAWXX - OAWV * ATVN[0].second)*RWMAGH;
+				WNTYY = -OAWV * ATVN[1].second * RWMAGH;
+				WNTZZ = (OAWZZ - OAWV*ATVN[2].second)*RWMAGH;
+				UNTXX = WNTYY * ATVN[2].second - WNTZZ * ATVN[1].second;
+				UNTYY = WNTZZ * ATVN[0].second - WNTXX*ATVN[2].second;
+				UNTZZ = WNTXX*ATVN[1].second - WNTYY * ATVN[0].second;
+			}
+			double A2B2C2 = A2B2*ATVN[2].first;
+			double DEN1, DEN2;
+			DEN1 = B2C2*UNTXX*UNTXX + A2C2*UNTYY*UNTYY + A2B2*UNTZZ*UNTZZ;
+			DEN2 = B2C2*WNTXX*WNTXX + A2C2*WNTYY*WNTYY + A2B2*WNTZZ*WNTZZ;
+			AT1 = A2B2C2 / DEN1;
+			AT2 = A2B2C2 / DEN2;
+		}
+		double UN[3],UNXX,UNYY,UNZZ,WN[3],WNXX,WNYY,WNZZ;
+		UN[maxIND[0]] = UNTXX;
+		UN[maxIND[1]] = UNTYY;
+		UN[maxIND[2]] = UNTZZ;
+		UNXX = UN[0];
+		UNYY = UN[1];
+		UNZZ = UN[2];
+		WN[maxIND[0]] = WNTXX;
+		WN[maxIND[1]] = WNTYY;
+		WN[maxIND[2]] = WNTZZ;
+		WNXX = WN[0];
+		WNYY = WN[1];
+		WNZZ = WN[2];
+		vector<vector<double>> rotMat = elementContainer[el]->getRotationMatrix();
+		ROTATE(rotMat, UNXX, UNYY, UNZZ, UNX, UNY, UNZ);
+		ROTATE(rotMat, WNXX, WNYY, WNZZ, WNX, WNY, WNZ);
+	}
+	double DT1, DT2;
+	DT1 = AT1 * VMAG;
+	DT2 = AT2 * VMAG;
+
+	TENSYM(DL, DT1, DT2, VNX, UNX, WNX,VNY, UNY, WNY, VNZ, UNZ, WNZ, DXXG, DXYG, DXZG, DYXG, DYYG, DYZG,DZXG, DZYG, DZZG);
+}
+void ControlParameters::ROTATE(vector<vector<double>> rotMat, double v1, double v2, double v3, double& vr1, double& vr2, double& vr3){
+	vr1 = v1 * rotMat[0][0] + v2 * rotMat[0][1] + v3 * rotMat[0][2];
+	vr2 = v1 * rotMat[0][0] + v2 * rotMat[0][1] + v3 * rotMat[0][2];
+	vr3 = v1 * rotMat[0][0] + v2 * rotMat[0][1] + v3 * rotMat[0][2];
+	
+}
 void ControlParameters::GLOCOL(){}
 void ControlParameters::GLOBAN(){}
 void ControlParameters::ELEMN2(){}
@@ -5042,11 +5343,11 @@ void ControlParameters::setITERPARAMS(){
 	}
 }
 
-void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XLOC, double YLOC, double ZLOC){
+void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XLOC, double YLOC, double ZLOC,double & PORGT){
 	double XF1, XF2, YF1, YF2, ZF1, ZF2;
-	double XIIX[8] = { -1, 1, 1, -1, -1, 1, 1, -1 };
-	double YIIY[8] = { -1, -1, 1, 1, -1, -1, 1, 1 };
-	double ZIIZ[8] = { -1, -1, -1, -1, 1, 1, 1, 1 };
+	double XIIX[8] = { -1,  1,  1, -1, -1,  1,  1, -1 };
+	double YIIY[8] = { -1, -1,  1,  1, -1, -1,  1,  1 };
+	double ZIIZ[8] = { -1, -1, -1, -1,  1,  1,  1,  1 };
 	XF1 = 1 - XLOC;
 	XF2 = 1 + XLOC;
 	YF1 = 1 - YLOC;
@@ -5056,20 +5357,20 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	double FX[8] = { XF1, XF2, XF2, XF1, XF1, XF2, XF2, XF1 };
 	double FY[8] = { YF1, YF1, YF2, YF2, YF1, YF1, YF2, YF2 };
 	double FZ[8] = { ZF1, ZF1, ZF1, ZF1, ZF2, ZF2, ZF2, ZF2 };
-	double DWDXL[8] = {};
-	double DWDYL[8] = {};
-	double DWDZL[8] = {};
-	double DFDXL[8] = {};
-	double DFDYL[8] = {};
-	double DFDZL[8] = {};
+	double DWDXL[8] = {0};
+	double DWDYL[8] = {0};
+	double DWDZL[8] = {0};
+	double DFDXL[8] = {0};
+	double DFDYL[8] = {0};
+	double DFDZL[8] = {0};
 	double AA, BB, CC;
 	double XIXI, YIYI, ZIZI;
-	double AFX[8] = {};
-	double AFY[8] = {};
-	double AFZ[8] = {};
-	double XDW[8] = {};
-	double YDW[8] = {};
-	double ZDW[8] = {};
+	double AFX[8] = {0};
+	double AFY[8] = {0};
+	double AFZ[8] = {0};
+	double XDW[8] = {0};
+	double YDW[8] = {0};
+	double ZDW[8] = {0};
 	double THAAX, THBBY, THCCZ;
 	AA = BB = CC = 0;
 	double CJ[3][3] = {};
@@ -5084,7 +5385,7 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	double ADFDXL, ADFDYL, ADFDZL;
 	double PITERG, UITERG, CNUBG, DPDXG, DPDYG, DPDZG;
 	PITERG = UITERG = CNUBG = DPDXG = DPDYG = DPDZG = 0;
-
+	VXG[8] = VYG[8] = VZG[8] = { 0 };
 	double DENOM, PGX, PGY, PGZ;
 	
 	double VLMAG, VXL, VYL, VZL; // LOCAL VELOCITIES
@@ -5092,7 +5393,7 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	double DSWDPG;
 
 	for (int i = 0; i < 8; i++){
-		F[i] = 0.125*FX[i] * FY[i] * FZ[i];
+		F[node][i] = 0.125*FX[i] * FY[i] * FZ[i];
 	}
 	// CALCULATE Derivatives wrt local coords
 	for (int i = 0; i < 8; i++){
@@ -5138,9 +5439,9 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	//Calculate3 determinates in Global coordinates
 
 	for (int i = 0; i < 8; i++){
-		DFDXG[i] = iCJm(0, 0)*DFDXL[i] + iCJm(0, 1)*DFDYL[i] + iCJm(0, 2)*DFDZL[i];
-		DFDYG[i] = iCJm(1, 0)*DFDXL[i] + iCJm(1, 1)*DFDYL[i] + iCJm(1, 2)*DFDZL[i];
-		DFDZG[i] = iCJm(2, 0)*DFDXL[i] + iCJm(2, 1)*DFDYL[i] + iCJm(2, 2)*DFDZL[i];
+		DFDXG[node][i] = iCJm(0, 0)*DFDXL[i] + iCJm(0, 1)*DFDYL[i] + iCJm(0, 2)*DFDZL[i];
+		DFDYG[node][i] = iCJm(1, 0)*DFDXL[i] + iCJm(1, 1)*DFDYL[i] + iCJm(1, 2)*DFDZL[i];
+		DFDZG[node][i] = iCJm(2, 0)*DFDXL[i] + iCJm(2, 1)*DFDYL[i] + iCJm(2, 2)*DFDZL[i];
 	}
 
 	// CALCULATE CONSISTENT COMPONENTS OF (RHO*GRAV) TERM IN LOCAL COORDINATES
@@ -5165,16 +5466,16 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	RGXGM1 = iCJm(0,0)*RGXLM1 + iCJm(0,1)*RGYLM1 + iCJm(0,2)*RGZLM1;
 	RGYGM1 = iCJm(1,0)*RGXLM1 + iCJm(1,1)*RGYLM1 + iCJm(1,2)*RGZLM1;
 	RGZGM1 = iCJm(2,0)*RGXLM1 + iCJm(2,1)*RGYLM1 + iCJm(2,2)*RGZLM1;
-
+	PORGT = 0;
 	for (int i = 0; i < 8; i++){
 		int nodeNum = elementNodes[el][i];
-		DPDXG = DPDXG + nodeContainer[nodeNum]->getPVEL()*DFDXG[i];
-		DPDYG = DPDYG + nodeContainer[nodeNum]->getPVEL()*DFDYG[i];
-		DPDZG = DPDZG + nodeContainer[nodeNum]->getPVEL()*DFDZG[i];
-		PORG[node] = PORG[node] + nodeContainer[nodeNum]->getPorosity()*F[i];
-		PITERG = PITERG + nodeContainer[nodeNum]->getPITER()*F[i];
-		UITERG = UITERG + nodeContainer[nodeNum]->getUITER()*F[i];
-		CNUBG = CNUBG + nodeContainer[nodeNum]->getCNUB()*F[i];
+		DPDXG = DPDXG + nodeContainer[nodeNum]->getPVEL()*DFDXG[node][i];
+		DPDYG = DPDYG + nodeContainer[nodeNum]->getPVEL()*DFDYG[node][i];
+		DPDZG = DPDZG + nodeContainer[nodeNum]->getPVEL()*DFDZG[node][i];
+		PORGT = PORGT + nodeContainer[nodeNum]->getPorosity()*F[node][i];
+		PITERG = PITERG + nodeContainer[nodeNum]->getPITER()*F[node][i];
+		UITERG = UITERG + nodeContainer[nodeNum]->getUITER()*F[node][i];
+		CNUBG = CNUBG + nodeContainer[nodeNum]->getCNUB()*F[node][i];
 	}
 
 	RHOG[node] = RHOW0 + DRWDU*(UITERG - URHOW0);
@@ -5257,7 +5558,7 @@ ASYM:
 	}
 	//CALCULATE ASYMMETRIC WEIGHTING FUNCTION, W.
 	for (int i = 0; i < 8; i++){
-		W[i] = AFX[i] * AFY[i] * AFZ[i];
+		W[i][node] = AFX[i] * AFY[i] * AFZ[i];
 	}
 
 	THAAX = 0.5 - 1.5*AA*XLOC;
@@ -5276,9 +5577,9 @@ ASYM:
 	}
 	//CALCULATE DERIVATIVES WITH RESPECT TO GLOBAL COORDINATES
 	for (int i = 0; i < 8; i++){
-		DWDXG[i] = iCJm(0, 0)*DWDXL[i] + iCJm(0, 1)*DWDYL[i] + iCJm(0, 2)*DWDZL[i];
-		DWDYG[i] = iCJm(1, 0)*DWDXL[i] + iCJm(1, 1)*DWDYL[i] + iCJm(1, 2)*DWDZL[i];
-		DWDZG[i] = iCJm(2, 0)*DWDXL[i] + iCJm(2, 1)*DWDYL[i] + iCJm(2, 2)*DWDZL[i];
+		DWDXG[node][i] = iCJm(0, 0)*DWDXL[i] + iCJm(0, 1)*DWDYL[i] + iCJm(0, 2)*DWDZL[i];
+		DWDYG[node][i] = iCJm(1, 0)*DWDXL[i] + iCJm(1, 1)*DWDYL[i] + iCJm(1, 2)*DWDZL[i];
+		DWDZG[node][i] = iCJm(2, 0)*DWDXL[i] + iCJm(2, 1)*DWDYL[i] + iCJm(2, 2)*DWDZL[i];
 	}
 	
 }
@@ -5481,4 +5782,130 @@ void ControlParameters::PTRSET(){
 		JA(i - 1) = JAA[i];
 	}
 
+}
+
+void ControlParameters::alpayPTR(){
+	Timer t,tgen;
+	nodeNeighbors.reserve(NN+1);
+	for (int i = 0; i <= NN; i++){
+		nodeNeighbors.push_back(vector<int>());
+	}
+	cout << t << endl;
+	t.reset();
+	for (int el = 1; el <= NE; el++){
+		for (int node = 0; node < N48; node++){
+			int nodeNum = elementNodes[el][node];
+			for (int neighbor = 0; neighbor < N48; neighbor++){
+				int nNum = elementNodes[el][neighbor];
+				if (nodeNum == nNum )
+					continue;
+				nodeNeighbors[nodeNum].push_back(nNum);
+			}
+		}
+
+	}
+	cout << t << endl;
+
+	t.reset();
+	int NELTX = 0;
+	//for (int node = 1; node <= NN; node++){
+	//	unordered_set<int> s;
+	//	for (int i : nodeNeighbors[node])
+	//		s.insert(i);
+	//	nodeNeighbors[node].assign(s.begin(), s.end());
+	//	sort(nodeNeighbors[node].begin(), nodeNeighbors[node].end());
+	//	NELTX = NELTX + nodeNeighbors[node].size() + 1;
+	//}
+
+	for (int node = 1; node <= NN; node++){
+		sort(nodeNeighbors[node].begin(), nodeNeighbors[node].end());
+		nodeNeighbors[node].erase(unique(nodeNeighbors[node].begin(), nodeNeighbors[node].end()), nodeNeighbors[node].end());
+	 NELTX = NELTX + nodeNeighbors[node].size() + 1;
+	}
+
+	cout << t << endl;
+	cout << tgen << endl;
+	cout << "NELTX " << NELTX << endl; 
+	cout << " end " << endl;
+	NELT = NELTX;
+	IA = VectorXd::Zero(NELT);
+	JA = VectorXd::Zero(NN + 1);
+
+	int JASTART = 1;
+	for (int i = 1; i <= NN; i++){
+		JA(i-1) = JASTART;
+		IA(JASTART-1) = i;
+		int ind = 1;
+		for (int x : nodeNeighbors[i]){
+			IA(JASTART + ind -1) = x;
+			ind++;
+		}
+		JASTART = JASTART + nodeNeighbors[i].size() + 1;
+	}
+	JA(NN) = NELT + 1;
+
+	//int * IAA = new int[NELT + 1];
+	//int * JAA = new int[NN + 2];
+
+	//for (int i = 1; i <= NELT; i++){
+	//	IAA[i] = IA(i - 1);
+	//}
+	//for (int i = 1; i <= NN+1; i++){
+	//	JAA[i] = JA(i - 1);
+	//}
+
+	////-		IAA	0x000000005dc50070 {-842150451}	int *
+	////+		JAA	0x0000000061a30070 {-842150451}	int *
+
+
+}
+
+void ControlParameters::TENSYM(double DL, double DT1, double DT2, double VNX, double UNX, double WNX,double VNY, double UNY, double WNY, double VNZ, double UNZ, double WNZ,
+	double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG,double& DZXG, double& DZYG, double& DZZG){
+
+	DXXG = DL*VNX*VNX + DT1 * UNX*UNX + DT2 * WNX*WNX;
+	DXYG = DL*VNX*VNY + DT1*UNX*UNY + DT2*WNX*WNY;
+	DXZG = DL*VNX*VNZ + DT1*UNX*UNZ + DT2*WNX*WNZ;
+	DYYG = DL*VNY*VNZ + DT1*UNY*UNY + DT2*WNY*WNY;
+	DYZG = DL*VNY*VNZ + DT1*UNY*UNZ + DT2*WNY*WNZ;
+	DZZG = DL*VNZ*VNZ + DT1*UNZ*UNZ + DT2*WNZ*WNZ;
+	DYXG = DXYG;
+	DZXG = DXZG;
+	DZYG = DYZG;
+
+
+	
+}
+void ControlParameters::setITERPARAMS1(){
+	Node * node;
+	for (int i = 1; i <= NN; i++){
+		node = nodeContainer[i];
+		node->setDPDTITR((node->getPVEC() - node->getPM1()) / DELTP);
+		node->setPITER(node->getPVEC());
+		node->setPVEL(node->getPVEC());
+		node->setUITER(node->getUVEC());
+		node->setRCITM1(node->getRCIT());
+		node->setRCIT(RHOW0 + DRWDU*(node->getUITER() - URHOW0));
+	}
+}
+
+void ControlParameters::setITERPARAMS2(){
+	Node * node;
+	for (int i = 1; i <= NN; i++){
+		node = nodeContainer[i];
+		node->setQINITR(node->getQIN());
+	}
+}
+
+void ControlParameters::setITERPARAMS3(){
+	Node * node;
+	for (int i = 1; i <= NN; i++){
+		node = nodeContainer[i];
+		node->setPITER(BDELP1*node->getPVEC() - BDELP*node->getPM1());
+		node->setUITER(BDELU1*node->getUVEC() - BDELU*node->getUM1());
+		node->setDPDTITR((node->getPVEC() - node->getPM1()) / DLTPM1);
+		node->setPM1(node->getPVEC());
+		node->setUM2(node->getUM1());
+		node->setUM1(node->getUVEC());
+	}
 }

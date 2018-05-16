@@ -51,8 +51,15 @@ void Element::setVANG1(double val){ this->VANG1 = val; }
 void Element::setVANG2(double val){ this->VANG2 = val; }
 void Element::setVMAG(double val){ this->VMAG = val; }
 //Getters
-double Element::getRotationMatrix(){
-	return **rotationMatrix;
+vector<vector<double>> Element::getRotationMatrix(){
+	vector<vector<double>> temp;
+	vector<double> fr(rotationMatrix[0], rotationMatrix[0] + 3);
+	vector<double> sr(rotationMatrix[1], rotationMatrix[1] + 3);
+	vector<double> tr(rotationMatrix[2], rotationMatrix[2] + 3);
+	temp.push_back(fr);
+	temp.push_back(sr);
+	temp.push_back(tr);
+	return temp;
 }
 
 double Element::getPANGL1(){

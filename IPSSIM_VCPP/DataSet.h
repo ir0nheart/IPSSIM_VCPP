@@ -8,6 +8,8 @@
 #include "InputFileParser.h"
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/spirit/include/qi_string.hpp>
+#include<boost/spirit/include/qi.hpp>
 using namespace std;
 #pragma once
 class ControlParameters;

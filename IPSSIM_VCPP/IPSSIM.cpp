@@ -225,6 +225,7 @@ void main(){
 	controlParameters->setParameters();
 	cout << "\t Parsing datasets and setting control parameters took " << t << " seconds" << endl;
 
+
 	Miscellaneous::spacer();
 
 	
@@ -251,7 +252,9 @@ void main(){
 	// MATRIX STRUCTURE IN "SLAP COLUMN FORMAT. DIMENSION NELT GETS SET HERE
 
 	if (controlParameters->getKSOLVP() != 0){
-		controlParameters->PTRSET();
+		//controlParameters->PTRSET();
+
+		controlParameters->alpayPTR();
 	}
 	else{
 		controlParameters->setNELT(controlParameters->getNN());
@@ -334,6 +337,15 @@ void main(){
 	if (controlParameters->getIT() == 0){
 		controlParameters->setDELTLC(controlParameters->getDELT());
 	}
+	else{
+		double TMITM1, TMIT;
+		TMITM1 = controlParameters->getTIMESTEPSSchedule()->getSList()[0].first;
+		TMIT = controlParameters->getTIMESTEPSSchedule()->getSList()[1].first;
+		controlParameters->setDELT( TMITM1 - TMIT);
+		controlParameters->setDELTLC(controlParameters->getDELT());
+		controlParameters->setTSEC(TMIT);
+		
+	}
 	controlParameters->setIBCT();
 
 	// Check if Restart
@@ -376,7 +388,7 @@ void main(){
 		goto BEGINTIMESTEP;
 	}
 	
-	controlParameters->setML(1.0);
+	controlParameters->setML(1);
 	controlParameters->setNOUMAT(0);
 	controlParameters->setISSFLO(2);
 	controlParameters->setITER(0);
@@ -494,39 +506,20 @@ BEGINITERATION:
 		cout << "    NON-LINEARITY ITERATION " << controlParameters->getITER() << endl;
 	}
 
-	if (controlParameters->getML() < 0){
+	if ((controlParameters->getML() - 1) < 0){
 
-		for (int i = 1; i <= controlParameters->getNN(); i++){
-			Node * node = controlParameters->getNodeContainer()[i];
-			node->setDPDTITR((node->getPVEC() - node->getPM1()) / controlParameters->getDELTP());
-			node->setPITER(node->getPVEC());
-			node->setPVEL(node->getPVEC());
-			node->setUITER(node->getUVEC());
-			node->setRCITM1(node->getRCIT());
-			node->setRCIT(controlParameters->getRHOW0() + controlParameters->getDRWDU()*(node->getUITER() - controlParameters->getURHOW0()));
-		}
+		controlParameters->setITERPARAMS1();
 
 		/// CALL BC
 
 		if (controlParameters->getITER() <= 2){
-			for (int i = 1; i <= controlParameters->getNN(); i++){
-				Node * node = controlParameters->getNodeContainer()[i];
-				node->setQINITR(node->getQIN());
-			}
+			controlParameters->setITERPARAMS2();
 		}
 
 		if (controlParameters->getITER() > 1)
 			goto LEND;
 
-		for (int i = 1; i <= controlParameters->getNN(); i++){
-			Node * node = controlParameters->getNodeContainer()[i];
-			node->setPITER(controlParameters->getBDELP1()*node->getPVEC() - controlParameters->getBDELP()*node->getPM1());
-			node->setUITER(controlParameters->getBDELU1()*node->getUVEC() - controlParameters->getBDELU()*node->getUM1());
-			node->setDPDTITR((node->getPVEC() - node->getPM1()) / controlParameters->getDLTPM1());
-			node->setPM1(node->getPVEC());
-			node->setUM2(node->getUM1());
-			node->setUM1(node->getUVEC());
-		}
+			controlParameters->setITERPARAMS3();
 		goto LEND;
 	}
 

@@ -158,7 +158,7 @@ public:
 	Element(Element && other);
 	Element & operator = (Element && other);
 
-	double getRotationMatrix();
+	vector<vector<double>> getRotationMatrix();
 	void ROTMATTENSYM();
 	void setPERMS2D();
 	void ROTMAT3D(); // Compute Rotation Matrix
