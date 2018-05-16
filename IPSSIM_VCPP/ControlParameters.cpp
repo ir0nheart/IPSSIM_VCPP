@@ -5376,6 +5376,7 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	double CJ[3][3] = {};
 	Matrix3d CJm(3,3);
 	Matrix3d iCJm(3,3);
+	double VV;
 	double DET;
 	double SWG, RELKG;
 	double RGXL,RGYL,RGZL,RGXLM1,RGYLM1,RGZLM1;
