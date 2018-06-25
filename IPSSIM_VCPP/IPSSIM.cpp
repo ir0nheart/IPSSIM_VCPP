@@ -333,6 +333,7 @@ void main(){
 	}
 
 	controlParameters->setTEMAX();
+	controlParameters->setIT(controlParameters->getITRST());
 
 	if (controlParameters->getIT() == 0){
 		controlParameters->setDELTLC(controlParameters->getDELT());

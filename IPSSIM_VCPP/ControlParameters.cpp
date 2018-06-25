@@ -511,6 +511,7 @@ nodeUIN = new double[NN + 1]{};
 nodeQUIN = new double[NN + 1]{};
 nodePVEC = new double[NN + 1]{};
 nodeUVEC = new double[NN + 1]{};
+nodeVOL = new double[NN + 1]{};
 
 nodeContainer.reserve(NN+1);
 
@@ -715,7 +716,7 @@ void ControlParameters::setITREL(double val){ this->ITREL = val; }
 void ControlParameters::setITBCS(double val){ this->ITBCS = val; }
 int ControlParameters::getITREL(){ return this->ITREL; }
 int ControlParameters::getITBCS(){ return this->ITBCS; }
-int ControlParameters::getITRST(){ return this->ITREL; }
+int ControlParameters::getITRST(){ return this->ITRST; }
 void ControlParameters::setOnceP(bool val){ this->onceP = val; }
 bool ControlParameters::getOnceP(){ return this->onceP; }
 void ControlParameters::setDELTLC(double val){
@@ -2661,6 +2662,7 @@ void ControlParameters::createNodes(){
 		nodeContainer[i]->setQUIN(nodeQUIN[i]);
 		nodeContainer[i]->setPVEC(nodePVEC[i]);
 		nodeContainer[i]->setUVEC(nodeUVEC[i]);
+		nodeContainer[i]->setVOL(nodeVOL[i]);
 		nodeContainer[i]->setSWT(1.0);
 		nodeContainer[i]->setTOTSTR(0);
 		nodeContainer[i]->setPOREP(0);
@@ -5105,7 +5107,7 @@ void ControlParameters::ELEMN3(){
 				GLOBAN();
 			}
 			else{
-				GLOCOL();
+				GLOCOL(el, ML, VOLE, BFLOWE, DFLOWE, BTRANE, DTRANE);
 			}
 		}
 
@@ -5315,7 +5317,31 @@ void ControlParameters::ROTATE(vector<vector<double>> rotMat, double v1, double 
 	vr3 = v1 * rotMat[0][0] + v2 * rotMat[0][1] + v3 * rotMat[0][2];
 	
 }
-void ControlParameters::GLOCOL(){}
+void ControlParameters::GLOCOL(int el, int ML, double VOLE[8], double BFLOWE[8][8], double DFLOWE[8], double BTRANE[8][8], double DTRANE[8][8])
+{
+	int ib, jb,M;
+	for (int i = 0; i < N48; i++){
+		ib=elementContainer[el]->getElementNodes()[i];
+		for (int j = 0; j < N48; j++)
+		{
+			jb = elementContainer[el]->getElementNodes()[j];
+			int MBEG = JA(jb);
+			int MEND = JA(jb + 1) ;
+
+			for (int k = MBEG; k < MEND; k++)
+			{
+				if (ib == IA(k))
+				{
+					M = k;
+					break;
+				}
+			}
+			double val = PMAT(M, 0) + BFLOWE[i][j];
+			PMAT(M, 0) = val;
+			
+		}
+	}
+}
 void ControlParameters::GLOBAN(){}
 void ControlParameters::ELEMN2(){}
 void ControlParameters::ADSORB(){}

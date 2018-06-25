@@ -58,6 +58,7 @@ public:
 	double * nodeQUIN;
 	double * nodePVEC;
 	double * nodeUVEC;
+	double * nodeVOL;
 
 	void PTRSET();
 	void createNodes();
@@ -526,7 +527,7 @@ public:
 	void BASIS3(int ICALL,int el, int node,int realNode, double XLOC, double YLOC, double ZLOC,double &PORGT);
 	void UNSAT(double& SW, double& DSWDP, double& RELK, double PRES, double KREG);
 	void BUBSAT(double& SWBG, double&  RELKBG, double  PITERG, double  CNUBG, double&  RELKTG, double& SWTG, double SWG, double  RELKG);
-	void GLOCOL();
+	void GLOCOL(int el, int ML,double VOLE[8], double BFLOWE[8][8],double DFLOWE[8], double BTRANE[8][8],double DTRANE[8][8]);
 	void GLOBAN();
 	void createSolverMatrix();
 	void DIMWRK(int KSOLVR,int NSAVE,int& NWI, int& NWF);

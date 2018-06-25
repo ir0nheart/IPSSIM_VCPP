@@ -72,6 +72,8 @@ public:
 	void setPM(double val);
 	void setUM(double val);
 	void setCNUBM1(double val);
+	void setVOL(double val);
+	double getVOL();
 	double getPM();
 	double getUM();
 	void setPM1(double val);
@@ -157,6 +159,7 @@ private:
 	double UM2;
 	double GNUU1, GNUP1, QPLITR,QINITR,CNUBM1;
 	int IBCPBC,IBCUBC,IBCSOP,IBCSOU;
+	double VOL;
 	bool PBCDef, UBCDef, QINDef, UINDef, QUINDef;
 };
 

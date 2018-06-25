@@ -87,6 +87,11 @@ void Node::setGNUU1(double val){ this->GNUU1 = val; }
 void Node::setGNUP1(double val){ this->GNUP1 = val; }
 void Node::setQPLITR(double val){ this->QPLITR = val; }
 void Node::setQINITR(double val) { this->QINITR = val; }
+void Node::setVOL(double val)
+{
+	this->VOL = val;
+}
+
 
 // Getters
 int Node::getIBCPBC(){ return this->IBCPBC; }
@@ -111,6 +116,7 @@ double Node::getSWT(){ return this->SWT; }
 double Node::getSTRRAT(){ return this->STRRAT; }
 double Node::getEFFSTR(){ return this->EFFSTR; }
 double Node::getEFFSTRI(){ return this->EFFSTRI; }
+double Node::getVOL(){ return this->VOL; }
 Layer * Node::getLayer(){ return this->layer; }
 int Node::getLayerN(){ return this->layerN; }
 double Node::getPOREP(){ return this->POREP; }
