@@ -5325,10 +5325,10 @@ void ControlParameters::GLOCOL(int el, int ML, double VOLE[8], double BFLOWE[8][
 		for (int j = 0; j < N48; j++)
 		{
 			jb = elementContainer[el]->getElementNodes()[j];
-			int MBEG = JA(jb);
-			int MEND = JA(jb + 1) ;
+			int MBEG = JA(jb-1)-1;
+			int MEND = JA(jb)-1 ;
 
-			for (int k = MBEG; k < MEND; k++)
+			for (int k = MBEG; k <= MEND; k++)
 			{
 				if (ib == IA(k))
 				{
