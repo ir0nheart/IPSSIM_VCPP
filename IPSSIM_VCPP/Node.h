@@ -122,7 +122,44 @@ public:
 	bool getQINDef();
 	bool getUINDef();
 	bool getQUINDef();
-	
+
+	void setCS1(double val);
+	void setCS2(double val);
+	void setCS3(double val);
+	void setSR(double val);
+	void setSL(double val);
+	void setU(double val);
+	void setDSWDP(double val);
+	void setSW(double val);
+	void setRHO(double val);
+	void setRELK(double val);
+	void setSWB(double val);
+	void setRELKB(double val);
+	void setRELKT(double val);
+	void setQUIN1(double val);
+	void setQIN1(double val);
+	void setUIN1(double val);
+	void setPBC1(double val);
+	void setUBC1(double val);
+
+	double getCS1();
+	double getCS2();
+	double getCS3();
+	double getSR();
+	double getSL();
+	double getU();
+	double getSW();
+	double getDSWDP();
+	double getRHO();
+	double getRELK();
+	double getSWB();
+	double getRELKB();
+	double getRELKT();
+	double getQUIN1();
+	double getQIN1();
+	double getUIN1();
+	double getUBC1();
+	double getPBC1();
 private: 
 	Layer * layer;
 	int layerN;
@@ -161,6 +198,18 @@ private:
 	int IBCPBC,IBCUBC,IBCSOP,IBCSOU;
 	double VOL;
 	bool PBCDef, UBCDef, QINDef, UINDef, QUINDef;
+	double CS1, CS2, CS3, SL, SR, U;
+	double SW, DSWDP;
+	double RHO;
+	double RELK;
+	double SWB;
+	double RELKB;
+	double RELKT;
+	double QUIN1;
+	double QIN1;
+	double UIN1;
+	double PBC1;
+	double UBC1;
 };
 
 #endif

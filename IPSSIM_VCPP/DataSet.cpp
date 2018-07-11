@@ -858,6 +858,7 @@ void DataSet::parseDataSet_6(){
 	}
 		CP->addToListOfSchedules(step_1andUP);
 		int lastind = TIME_STEPS->getSList().size() - 1;
+		CP->setTSTART(TREF + TIME_STEPS->getSList()[0].first);
 		CP->setTFINISH(TREF + TIME_STEPS->getSList()[lastind].first);
 		CP->setITMAX(TIME_STEPS->getSList().size() - 1);
 		CP->setDELT(TIME_STEPS->getSList()[1].first - TIME_STEPS->getSList()[0].first);

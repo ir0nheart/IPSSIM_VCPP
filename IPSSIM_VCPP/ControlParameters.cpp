@@ -41,6 +41,7 @@ int get_count()
 	return (c);
 }
 
+
 enum Colors{
 	BLACK = 0,
 	NAVY = 1,
@@ -158,7 +159,7 @@ void ControlParameters::addToListOfOBS(ObservationPoints * obs){
 	this->observationPointsContainer.push_back(obs);
 }
 void ControlParameters::addToNodeContainer(Node * aNode){
-	int nodeNumber = aNode->getNodeNumber();
+	//auto node_number = aNode->getNodeNumber();
 	this->nodeContainer.push_back(aNode);
 }
 void ControlParameters::addToElementContainer(Element * anElement){
@@ -1154,6 +1155,7 @@ void ControlParameters::Bound(string key){
 
 					if (IDUM > 0){
 						//aNode = nodeContainer[IDUM];
+						IPBC.push_back(IDUMA);
 						nodePBC[IDUMA] = stod(strtok(lineBuffer.data(), del));
 						nodeUBC[IDUMA] = stod(strtok(lineBuffer.data(), del));
 						nodeContainer[IDUMA]->setPBCDef(true);
@@ -1226,7 +1228,7 @@ void ControlParameters::Bound(string key){
 					}
 
 					if (IDUM > 0){
-						
+						IUBC.push_back(IDUMA);
 						nodeUBC[IDUMA]= stod(strtok(lineBuffer.data(), del));
 						nodeContainer[IDUMA]->setUBCDef(true);
 						_snprintf(buff, sizeof(buff), "       %9d      %+20.13e\n", IDUMA, nodeUBC[IDUMA]);
@@ -1636,8 +1638,8 @@ void ControlParameters::parseDataSet_14B(){
 		if (KNODAL == 1 && IUNSAT != 1){
 			logLine.append("\n\n\n\n           N O D E   I N F O R M A T I O N\n\n");
 			logLine.append("           NODE       X                Y                Z               POROSITY\n\n");
-			for (int i = 1; i < sizeof(nodeX); i++){
-				_snprintf(buff, sizeof(buff), "         %9d   %+14.5e   %+14.5e   %14.5e      %9.5f\n", i,nodeX[i],nodeY[i],nodeZ[i],nodePorosity[i]);
+			for (int vi = 1; vi < sizeof(nodeX); vi++){
+				_snprintf(buff, sizeof(buff), "         %9d   %+14.5e   %+14.5e   %14.5e      %9.5f\n", vi,nodeX[vi],nodeY[vi],nodeZ[vi],nodePorosity[vi]);
 				logLine.append(buff);
 			}
 
@@ -1888,7 +1890,7 @@ void ControlParameters::parseDataSet_15B(){
 		int LROLD = 1;
 	
 		pair<int, int> dataSetPosition = InputFileParser::Instance()->getDataSets()[16];
-		int size = dataSetPosition.second - dataSetPosition.first;
+		auto size = dataSetPosition.second - dataSetPosition.first;
 		char * map = InputFileParser::Instance()->mapViewOfINPFile;
 		vector<string> lines;
 		vector<char> lineBuffer;
@@ -1992,7 +1994,7 @@ void ControlParameters::parseDataSet_15B(){
 		int LRTEST = 1;
 		int LROLD = 0;
 		pair<int, int> dataSetPosition = InputFileParser::Instance()->getDataSets()[16];
-		int size = dataSetPosition.second - dataSetPosition.first;
+		//auto size = dataSetPosition.second - dataSetPosition.first;
 		char * map = InputFileParser::Instance()->mapViewOfINPFile;
 		vector<string> lines;
 		vector<char> lineBuffer;
@@ -2673,7 +2675,8 @@ void ControlParameters::createNodes(){
 					nodeContainer[i]->setLayer(layers[0],0);
 				}
 				else{
-					for (int j = 0; j<layers.size();j++){
+					const auto size_layers = static_cast<int>(layers.size());
+					for (int j = 0; j < size_layers;j++){
 					if (abs(nodeContainer[i]->getZCoord()) <= abs(layers[j]->getLayerBottom()) && abs(nodeContainer[i]->getZCoord()) > abs(layers[j]->getLayerTop())){
 						nodeContainer[i]->setLayer(layers[j],j);
 
@@ -2794,17 +2797,18 @@ void ControlParameters::BANWID(){
 
 	logLine.append("\n\n\n\n           **** MESH ANALYSIS ****\n\n");
 	int NDIF = 0;
-	int IELO = 0;
-	int IEHI = 0;
+	int ielo;
+	int iehi;
+	ielo = iehi = 0;
 	for (int i = 1; i <= NE; i++){
-		IELO = elementNodes[i][0];
-		IEHI = elementNodes[i][0];
+		ielo = elementNodes[i][0];
+		iehi = elementNodes[i][0];
 		for (int j = 1; j < N48; j++){
-			if (elementNodes[i][j] < IELO) IELO = elementNodes[i][j];
-			if (elementNodes[i][j] > IEHI) IEHI = elementNodes[i][j];
+			if (elementNodes[i][j] < ielo) ielo = elementNodes[i][j];
+			if (elementNodes[i][j] > iehi) iehi = elementNodes[i][j];
 		}
-		if ((IEHI - IELO) > NDIF){
-			NDIF = IEHI - IELO;
+		if ((iehi - ielo) > NDIF){
+			NDIF = iehi - ielo;
 			LEM = i;
 		}
 	}
@@ -2860,8 +2864,8 @@ void ControlParameters::loadBCS(){
 	// Check File and Create BCS objects
 	vector<int> timeStepPositions;
 	for (int i = 0; i < lines.size(); i++){
-		string chStr = lines[i].substr(0, 7);
-		if (chStr == "# BCSID"){
+		const string ch_str = lines[i].substr(0, 7);
+		if (ch_str == "# BCSID"){
 			timeStepPositions.push_back(i + 1);
 		}	
 	}
@@ -3603,7 +3607,9 @@ FIVEHUNDRED:
 
 	_snprintf(buff, sizeof(buff), "\n\n\n           TIME INCREMENT : %+15.4e SECONDS\n\n           TIME AT END   %+15.4e SECONDS\n", DELT, TSEC);
 	logLine.append(buff);
-	_snprintf(buff, sizeof(buff), "           OF STEP:      %+15.4e MINUTES\n                         %+15.4e HOURS\n                         %+15.4e DAYS\n                         %+15.4e WEEKS\n                         %+15.4e YEARS\n", TMIN, THOUR, TDAY, TWEEK, TMONTH, TYEAR);
+	_snprintf(buff, sizeof(buff),
+	          "           OF STEP:      %+15.4e MINUTES\n                         %+15.4e HOURS\n                         %+15.4e DAYS\n                         %+15.4e WEEKS\n                         %+15.4e MONTHS\n                         %+15.4e YEARS\n",
+	          TMIN, THOUR, TDAY, TWEEK, TMONTH, TYEAR);
 	logLine.append(buff);
  
 	if (ML == 2 && ISTOP >= 0)
@@ -4003,7 +4009,9 @@ void ControlParameters::OUTOBS(){
 	string logLine = "";
 	Writer * logWriter = Writer::OBSInstance();
 	char buff[512];
-	int KT, KTMAX,LCNT; //Number of printed time steps
+	int kt;
+	int KTMAX;
+	int LCNT;
 	double TJT,SJT;
 	bool IMPRTD = false;
 	double LCHORP, LCTORC, TOB, SOB;
@@ -5320,8 +5328,12 @@ void ControlParameters::ROTATE(vector<vector<double>> rotMat, double v1, double 
 void ControlParameters::GLOCOL(int el, int ML, double VOLE[8], double BFLOWE[8][8], double DFLOWE[8], double BTRANE[8][8], double DTRANE[8][8])
 {
 	int ib, jb,M;
+	ib = jb = M = -1;
 	for (int i = 0; i < N48; i++){
 		ib=elementContainer[el]->getElementNodes()[i];
+		nodeVOL[ib] = nodeVOL[ib] + VOLE[i];
+		nodePVEC[ib] = nodePVEC[ib] + DFLOWE[i];
+
 		for (int j = 0; j < N48; j++)
 		{
 			jb = elementContainer[el]->getElementNodes()[j];
@@ -5341,20 +5353,648 @@ void ControlParameters::GLOCOL(int el, int ML, double VOLE[8], double BFLOWE[8][
 			
 		}
 	}
+
+	if ((ML - 1) != 0)
+	{
+		if (NOUMAT != 1)
+		{
+			ib = jb = M = -1;
+			
+			for (int i = 0; i < N48; i++){
+				ib = elementContainer[el]->getElementNodes()[i];
+				for (int j = 0; j < N48; j++)
+				{
+					jb = elementContainer[el]->getElementNodes()[j];
+					int MBEG = JA(jb - 1) - 1;
+					int MEND = JA(jb) - 1;
+
+					for (int k = MBEG; k <= MEND; k++)
+					{
+						if (ib == IA(k))
+						{
+							M = k;
+							break;
+						}
+					}
+					double val = UMAT(M, 0) + DTRANE[i][j] + BTRANE[i][j];
+					UMAT(M, 0) = val;
+
+				}
+			}
+
+
+		}
+	}
+
+	
 }
 void ControlParameters::GLOBAN(){}
 void ControlParameters::ELEMN2(){}
-void ControlParameters::ADSORB(){}
-void ControlParameters::NODAL(){}
-void ControlParameters::BC(){}
-void ControlParameters::SOURCE1(string BCSID){
+void ControlParameters::ADSORB()
+{
+	if (ADSMOD == "NONE")
+	{
+		for (int i = 1; i <= NN; i++)
+		{
+			Node * n = nodeContainer[i];
+			n->setCS1(0);
+			n->setCS2(0);
+			n->setCS3(0);
+			n->setSL(0);
+			n->setSR(0);
+		}
+	}
+
+	if (ADSMOD == "LINEAR")
+	{
+		for (int i = 1; i <= NN; i++)
+		{
+			Node * n = nodeContainer[i];
+			n->setCS1(CHI1*RHOW0);
+			n->setCS2(0);
+			n->setCS3(0);
+			n->setSL(CHI1*RHOW0);
+			n->setSR(0);
+		}
+
+	}
+
+	if (ADSMOD == "FREUNDLICH")
+	{
+		double CHCH = CHI1 / CHI2;
+		double DCHI2 = 1.0 / CHI2;
+		double RH2 = pow(RHOW0,DCHI2);
+		double CHI2F = ((1.0 - CHI2) / CHI2);
+		for (int i = 1; i <= NN; i++)
+		{
+			Node * n = nodeContainer[i];
+			double UCH = 0;
+			if (n->getU() <= 0)
+			{
+				UCH = 1;
+			}
+			else
+			{
+				UCH = pow(n->getU(), CHI2F);
+			}
+			double RU = RH2 *UCH;
+			n->setCS1(CHCH*RU);
+			n->setCS2(0);
+			n->setCS3(0);
+			n->setSL(CHI1*RU);
+			n->setSR(0);
+
+		}
+		
+	}
+	if (ADSMOD == "LANGMUIR")
+	{
+		for (int i = 1; i <= NN; i++)
+		{
+			Node * n = nodeContainer[i];
+			double DD = 1.0 + CHI2*RHOW0*n->getU();
+
+			n->setCS1(CHI1*RHOW0/(DD*DD));
+			n->setCS2(0);
+			n->setCS3(0);
+			n->setSL(CHI1*RHOW0 / (DD*DD));
+			n->setSR(CHI1*RHOW0 / (DD*DD) * CHI2 * RHOW0 * n->getU() * n->getU());
+		}
+
+
+
+	}
+}
+void ControlParameters::NODAL()
+{
+	if (IUNSAT != 0)
+		IUNSAT = 1;
+
+	if (KSOLVP == 0)
+		JMID = NBHALF;
+	else
+		JMID = 1;
+
+	// DO NOT UPDATE NODAL PARAMETERS ON A TIME STEP WHEN ONLY U IS SOLVED FOR BY BACK SUBSTITION (I.E. WHEN NOUMAT = 1)
+	if (NOUMAT <= 0)
+	{
+		// SET UNSATURATED FLOW PARAMETERS AT NODES, SW AND DSWDP
+		for (int i = 1; i <= NN; i++)
+		{
+			if ((IUNSAT - 1) == 0)
+			{	
+				if (nodeContainer[i]->getPITER() < 0)
+				{
+					UNSAT(nodeContainer[i]);
+				}
+				else
+				{
+					nodeContainer[i]->setSW(1.0);
+					nodeContainer[i]->setDSWDP(0.0);
+				}
+			}
+		}
+
+		for (int i = 1; i <= NN; i++)
+		{
+			BUBSAT(nodeContainer[i]);
+		}
+
+		for (int i = 1; i <= NN; i++)
+		{
+			nodeContainer[i]->setRHO(RHOW0 + DRWDU*(nodeContainer[i]->getUITER() - URHOW0));
+		}
+	}
+
+	for (int i = 1; i <= NN; i++)
+	{
+		if (KSOLVP == 0)
+			IMID = i;
+		else
+			IMID = JA(i - 1);
+
+		SWRHON = nodeContainer[i]->getSWT()*nodeContainer[i]->getRHO();
+
+		if ((ML - 1) <= 0)
+		{
+			//AFLN = (1 - ISSFLO / 2)*(SWRHON * nodeContainer[i]->getSOP() + nodeContainer[i]->getPorosity()*nodeContainer[i]->getSWB*)
+			if ((ML - 1) < 0)
+			{
+				
+			}
+		}
+		else
+		{
+			//EPRS
+		}
+	}
+
+
+
+}
+void ControlParameters::BC()
+{
+	if (KSOLVP == 0)
+	{
+		JMID = NBHALF;
+	}
+	else
+	{
+		JMID = 1;
+	}
+	int ml_Case;
+
+	if (NPBC != 0)
+	{
+		int ind = -1;
+		if ((ML - 1) < 0)
+		{
+			ml_Case = 0;
+		}
+		else if ((ML - 1) == 0)
+		{
+			ml_Case = 1;
+		}
+		else
+		{
+			ml_Case = 2;
+		}
+
+		for (int i = 0; i < NPBC; i++)
+		{
+			ind = abs(IPBC[i]);
+			if (KSOLVP == 0)
+			{
+				IMID = ind;
+			}
+			else
+			{
+				IMID = JA(ind);
+			}
+
+
+			switch (ml_Case)
+			{
+			case 0:
+				{
+					  GPINL  = - 1 * nodeContainer[ind]->getGNUP1();
+					  GPINR = nodeContainer[ind]->getGNUP1() * nodePBC[ind];
+					  PMAT(IMID, JMID) = PMAT(IMID, JMID) - GPINL;
+					  nodePVEC[ind] = nodePVEC[ind] + GPINR;
+					  GUR = 0.0;
+					  GUL = 0.0;
+					  if (nodeContainer[ind]->getQPLITR() > 0)
+					  {
+						  GUL = -CW*nodeContainer[ind]->getQPLITR();
+						  GUR = -GUL*nodeUBC[ind];
+						  if (NOUMAT > 0)
+						  {
+							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
+						  }
+						  else
+						  {
+							  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
+						  }
+					  }
+					  else
+					  {
+						  if (NOUMAT > 0)
+						  {
+							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
+						  }
+						  else
+						  {
+							  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
+						  }
+					  }
+			}break;
+			case 1:
+				{
+					  GPINL = -1 * nodeContainer[ind]->getGNUP1();
+					  GPINR = nodeContainer[ind]->getGNUP1() * nodePBC[ind];
+					  PMAT(IMID, JMID) = PMAT(IMID, JMID) - GPINL;
+					  nodePVEC[ind] = nodePVEC[ind] + GPINR;
+				}break;
+			case 2:
+				{
+					  GUR = 0.0;
+					  GUL = 0.0;
+					  if (nodeContainer[ind]->getQPLITR() > 0)
+					  {
+						  GUL = -CW*nodeContainer[ind]->getQPLITR();
+						  GUR = -GUL*nodeUBC[ind];
+						  if (NOUMAT > 0)
+						  {
+							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
+						  }
+						  else
+						  {
+							  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
+						  }
+					  }
+					  else
+					  {
+						  if (NOUMAT > 0)
+						  {
+							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
+						  }
+						  else
+						  {
+							  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
+						  }
+					  }
+				}break;
+			default:break;
+			}
+
+
+
+
+
+		}
+
+		if (ml_Case != 1)
+		{
+			if (NUBC != 0)
+			{
+				int jnd = -1;
+				for (int j = 0; j < NUBC; j++)
+				{
+					jnd = j + NPBC;
+					jnd = abs(IUBC[jnd]);
+					if (KSOLVP == 0)
+					{
+						IMID = jnd;
+					}
+					else
+					{
+						IMID = JA(jnd);
+					}
+
+					if (NOUMAT > 0)
+					{
+						GUINR = nodeContainer[jnd]->getGNUU1() * nodeUBC[jnd];
+						nodeUVEC[jnd] = nodeUVEC[jnd] + GUINR;
+					}
+					else
+					{
+						GUINL = -1 * nodeContainer[jnd]->getGNUU1();
+						UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUINL;
+						GUINR = nodeContainer[jnd]->getGNUU1() * nodeUBC[jnd];
+						nodeUVEC[jnd] = nodeUVEC[jnd] + GUINR;
+						
+					}
+				}
+			}
+		}
+
+
+		
+	}
+		
+}
+void ControlParameters::UNSAT(Node * node)
+{ // Args  SW,DSWDP,RELK,PRES,KREG
+//	E X A M P L E   C O D I N G   FOR                                 
+//		    MESH WITH TWO REGIONS OF UNSATURATED PROPERTIES USING           
+//		    THREE PARAMETER - UNSATURATED FLOW RELATIONSHIPS OF                 
+//		    VAN GENUCHTEN(1980)                                              
+//	        RESIDUAL SATURATION, SWRES, GIVEN IN UNITS{ L**0 }              
+//		    PARAMETER, AA, GIVEN IN INVERSE PRESSURE UNITS{ m*(s**2) / kg }  
+//		    PARAMETER, VN, GIVEN IN UNITS{ L**0 }                          
+	float SWRES, AA, VN, SWRM1, AAPVN, VNF, AAPVNN, DNUM, DNOM, SWSTAR, SWRES1, SWRES2, AA1, AA2, VN1, VN2;
+	SWRES1 = 0.30;
+	AA1 = 5.0e-5;
+	VN1 = 2.0;
+	SWRES2 = SWRES1;
+	AA2 = AA1;
+	VN2 = VN1;
+
+	//BECAUSE THIS ROUTINE IS CALLED OFTEN FOR UNSATURATED FLOW RUNS,
+	//EXECUTION TIME MAY BE SAVED BY CAREFUL CODING OF DESIRED
+	//RELATIONSHIPS USING ONLY INTEGER AND SINGLE PRECISION VARIABLES!
+	//RESULTS OF THE CALCULATIONS MUST THEN BE PLACED INTO DOUBLE
+	//PRECISION VARIABLES SW, DSWDP AND RELK BEFORE LEAVING
+	//THIS SUBROUTINE.
+
+	// Set Parameters for current region, KREG
+	switch (node->getNREG())
+	{
+	case 1:
+		{
+			  SWRES = SWRES1;
+			  AA = AA1;
+			  VN = VN1;
+		}break;
+	case 2:
+		{
+			  SWRES = SWRES2;
+			  AA = AA2;
+			  VN = VN2;
+		}break;
+	default:break;
+	}
+
+	// Section (1):
+	// SW VS. PRES (Value calculated on each call to UNSAT)
+	// Coding MUST GIVE A VALUE TO SATURATION ,SW
+
+	// Three parameter model of van Genuchten(1980)
+
+	SWRM1 = 1.0 - SWRES;
+	AAPVN = 1 + pow((AA*(-1 * node->getPVEC())),VN);
+	VNF = (VN - 1.0) / VN;
+	AAPVNN = pow(AAPVN, VNF);
+	node->setSW(SWRES + SWRM1 / AAPVNN);
+
+	int cond = IUNSAT - 2;
+
+	if (cond == 0)
+	{
+		SWSTAR = (node->getSW() - SWRES) / SWRM1;
+		node->setRELK(sqrt(SWSTAR)*pow(1.0 - pow(1.0 - pow(SWSTAR, (1.0 / VNF)), VNF), 2));
+	}
+	if (cond < 0)
+	{
+		DNUM = AA * (VN - 1.0)*SWRM1*pow((AA*(-1 * node->getPVEC())), VN - 1.0);
+		DNOM = AAPVN * AAPVNN;
+		node->setDSWDP(DNUM / DNOM);
+	}
+
+}
+void ControlParameters::BUBSAT(Node * node)
+{
+	int N = 2;
+
+	double NUM = (PSTAR + node->getPVEC());
+	double NOM = (NUM + node->getCNUB()*GCONST*TEMP);
+	node->setSWB(NUM / NOM);
+	node->setRELKB(pow(node->getSWB(), N));
+
+	node->setSWT(node->getSWB()*node->getSW());
+	node->setRELKT(node->getRELKB()*node->getRELK());
+}
+
+void ControlParameters::SOURCE1(double& QIN1, double& UIN1, double IQSOP1, double& QUIN1, double IQSOU1, double& IQSOPT1, double& IQSOUT1, int NSOP1, int NSOU1, string BCSID){
 	//TO READ AND ORGANIZE TIME-DEPENDENT FLUID MASS SOURCE DATA AND
 	//SOLUTE MASS SOURCE DATA SPECIFIED IN THE OPTIONAL BCS INPUT FILE.
 	//NSOPI1 IS ACTUAL NUMBER OF TIME - STEP - DEPENDENT FLUID SOURCE NODES.
 	//NSOUI1 IS ACTUAL NUMBER OF TIME-STEP-DEPENDENT SOLUTE MASS SOURCE NODES.
+	
+	int NSOPI1 = NSOP1 - 1;
+	int NSOUI1 = NSOU1 - 1;
+
+	int NIQP = 0;
+	int NIQU = 0;
+
+	IQSOPT1 += 1;
+	IQSOUT1 += 1;
+
+	int IQP,IQU;
+
+
+	if (NSOPI1 != 0)
+	{
+		IQSOPT1 -= 1;
+		for (BCS* bcs : bcsContainer)
+		{ // Checks all defined bcs in .BCS file
+			int ind = -1;
+			for (int IQCP : bcs->getNodes())
+			{
+				ind += 1;
+				int IQP = abs(IQCP);
+				NIQP = NIQP + 1;
+				if (IQCP == 0)
+				{
+					NIQP = NIQP - 1;
+					if (NIQP == NSOPI1)
+						goto lblNSOU;
+
+					exitOnError("BCS-2,3-1");
+				}
+				else if (IQP > NN)
+				{
+					exitOnError("BCS-3-1");
+				}
+				else if (NIQP > NSOPI1)
+				{
+					continue;
+				}
+
+				if (IQCP > 0)
+				{
+					if (bcs->getQINC()[ind] > 0)
+					{
+						nodeContainer[IQP]->setQIN1(bcs->getQINC()[ind]);
+						nodeContainer[IQP]->setUIN1(bcs->getUINC()[ind]);
+					}
+					else
+					{
+						nodeContainer[IQP]->setQIN1(bcs->getQINC()[ind]);
+					}
+
+				}		
+			}
+
+		}
+
+	}
+	lblNSOU:
+	if (NSOUI1 != 0)
+	{
+		IQSOUT1 = -1;
+		for (BCS* bcs : bcsContainer)
+		{ // Checks all defined bcs in .BCS file
+			int ind = -1;
+			for (int IQCU : bcs->getNodes())
+			{	
+				ind += 1;
+				int IQU = abs(IQCU);
+				NIQU = NIQU + 1;
+				if (IQCU == 0)
+				{
+					NIQU = NIQU - 1;
+					if (NIQU == NSOUI1)
+						return;
+
+					exitOnError("BCS-2,3-1");
+				}
+				else if (IQU > NN)
+				{
+					exitOnError("BCS-4-1");
+				}
+				else if (NIQU > NSOUI1)
+				{
+					continue;
+				}
+				
+				if (IQCU > 0)
+				{
+					nodeContainer[IQU]->setQUIN1(bcs->getQUINC()[ind]);
+				}
+			}
+
+		}
+
+	}
+
+	
 
 }
-void ControlParameters::BOUND1(string BCSID){}
+void ControlParameters::BOUND1(int NPBC1,int NUBC1,int NBCN1,string BCSID)
+{
+	int ip;
+	int iu = 0;
+	int ipu = 0;
+	ip = ipu = iu = 0;
+	/*IPBCT1 = +1;
+	IUBCT1 = +1;*/
+
+	if (NPBC1 != 0)
+	{
+		for (BCS * bcs : bcsContainer)
+		{
+			int ind = -1;
+			for (int IDUM : bcs->getNodes())
+			{
+				ind += 1;
+				ipu += 1;
+				int IDUMA = abs(IDUM);
+
+				if (IDUM == 0)
+				{
+					ipu -= 1;
+					ip = ipu;
+					if (ip == NPBC1)
+						goto lblNUBC1;
+					exitOnError("BCS-2,5-1");
+				}
+				else if (IDUMA > NN)
+				{
+					exitOnError("BCS-5-1");
+				}
+				else if (ipu > NPBC1)
+				{
+					continue;
+				}
+
+				if (IDUM > 0)
+				{
+					
+					nodeContainer[IDUMA]->setPBC1(bcs->getPBC()[ind]);
+					nodeContainer[IDUMA]->setUBC1(bcs->getUBC()[ind]);
+				}
+				else if (IDUM < 0)
+				{
+					continue;
+				}
+				else
+				{
+					ipu -= 1;
+					ip = ipu;
+					if (ip == NPBC1)
+						goto lblNUBC1;
+					exitOnError("BCS-2,5-1");
+				}
+			}
+		}
+	}
+
+	lblNUBC1:
+	if (NUBC1 != 0)
+	{
+		for (BCS * bcs : bcsContainer)
+		{
+			int ind = -1;
+			for (int IDUM : bcs->getNodes())
+			{
+				ind += 1;
+				ipu += 1;
+				int IDUMA = abs(IDUM);
+
+				if (IDUM == 0)
+				{
+					ipu -= 1;
+					iu = ipu;
+					if (iu == NUBC1)
+						return;
+					exitOnError("BCS-2,6-1");
+				}
+				else if (IDUMA > NN)
+				{
+					exitOnError("BCS-6-1");
+				}
+				else if (ipu > (NUBC1+NPBC1))
+				{
+					continue;
+				}
+
+				if (IDUM > 0)
+				{
+					nodeContainer[IDUMA]->setUBC1(bcs->getUBC()[ind]);
+				}
+				else if (IDUM < 0)
+				{
+					continue;
+				}
+				else
+				{
+					ipu -= 1;
+					iu = ipu;
+					if (iu == NUBC1)
+						return;
+					exitOnError("BCS-2,6-1");;
+				}
+			}
+		}
+		
+	}
+
+}
 
 void ControlParameters::setITERPARAMS(){
 

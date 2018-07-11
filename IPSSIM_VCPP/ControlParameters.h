@@ -59,6 +59,10 @@ public:
 	double * nodePVEC;
 	double * nodeUVEC;
 	double * nodeVOL;
+	int IMID, JMID;
+	double GUL, GUR, GPINL, GPINR, GUINR, GUINL;
+	double SWRHON;
+
 
 	void PTRSET();
 	void createNodes();
@@ -100,8 +104,8 @@ public:
 	
 	void findObservationElement(int b, int e,int tid);
 	void setElementParametersThread();
-	void SOURCE1(string BCSID);
-	void BOUND1(string BCSID);
+	void SOURCE1(double& QIN1, double& UIN1, double IQSOP1, double& QUIN1, double IQSOU1, double& IQSOPT1, double& IQSOUT1, int NSOP1, int NSOU1, string BCSID);
+	void BOUND1(int NPBC1, int NUBC1, int NBCN1, string BCSID);
 	void loadInitialConditions();
 
 	void findObservationElementThread();
@@ -526,6 +530,8 @@ public:
 	void BC();
 	void BASIS3(int ICALL,int el, int node,int realNode, double XLOC, double YLOC, double ZLOC,double &PORGT);
 	void UNSAT(double& SW, double& DSWDP, double& RELK, double PRES, double KREG);
+	void UNSAT(Node * node);
+	void BUBSAT(Node * node);
 	void BUBSAT(double& SWBG, double&  RELKBG, double  PITERG, double  CNUBG, double&  RELKTG, double& SWTG, double SWG, double  RELKG);
 	void GLOCOL(int el, int ML,double VOLE[8], double BFLOWE[8][8],double DFLOWE[8], double BTRANE[8][8],double DTRANE[8][8]);
 	void GLOBAN();

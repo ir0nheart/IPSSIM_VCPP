@@ -138,6 +138,23 @@ double Node::getGNUU1(){ return this->GNUU1; }
 double Node::getGNUP1(){ return this->GNUP1; }
 double Node::getQPLITR(){ return this->QPLITR; }
 double Node::getQINITR(){ return this->QINITR; }
+void Node::setSW(double val){ this->SW = val; }
+double Node::getSW(){ return this->SW; }
+
+void Node::setDSWDP(double val){ this->DSWDP = val; }
+double Node::getDSWDP()
+{
+	return this->DSWDP;
+}
+
+void Node::setRELK(double val){ this->RELK = val; }
+double Node::getRELK()
+{
+	return this->RELK;
+}
+
+void Node::setRHO(double val){ this->RHO = val; }
+double Node::getRHO(){ return this->RHO; }
 
 void Node::setPBCDef(bool val){ this->PBCDef = val; }
 void Node::setUBCDef(bool val){ this->UBCDef = val; }
@@ -149,3 +166,159 @@ bool Node::getUBCDef(){ return this->UBCDef; }
 bool Node::getQINDef(){ return this->QINDef; }
 bool Node::getUINDef(){ return this->UINDef; }
 bool Node::getQUINDef(){ return this->QUINDef; }
+
+void Node::setQIN1(double val)
+{
+	this->QIN1 = val;
+}
+
+void Node::setQUIN1(double val)
+{
+	this->QUIN1 = val;
+}
+
+void Node::setUIN1(double val)
+{
+	this->UIN1 = val;
+}
+
+double Node::getQIN1()
+{
+	return this->QIN1;
+}
+
+double Node::getQUIN1()
+{
+	return this->QUIN1;
+}
+
+double Node::getUIN1()
+{
+	return this->UIN1;
+}
+
+
+
+double Node::getPBC1()
+{
+	return this->PBC1;
+}
+
+double Node::getUBC1()
+{
+	return this->UBC1;
+}
+
+void Node::setPBC1(double val)
+{
+	this->PBC1 = val;
+}
+
+void Node::setUBC1(double val)
+{
+	this->UBC1 = val;
+
+}
+
+
+void Node::setRELKB(double val)
+{
+	this->RELKB = val;
+}
+
+void Node::setRELKT(double val)
+{
+	this->RELKT = val;
+}
+
+void Node::setSWB(double val)
+{
+	this->SWB = val;
+}
+
+double Node::getRELKB()
+{
+	return this->RELKB;
+}
+
+double Node::getRELKT()
+{
+	return this->RELKT;
+}
+
+double Node::getSWB()
+{
+	return this->SWB;
+}
+
+
+
+void Node::setSR(double val)
+{
+	this->SR = val;
+}
+
+void Node::setSL(double val)
+{
+	this->SL = val;
+}
+
+void Node::setCS1(double val)
+{
+	this->CS1 = val;
+}
+
+void Node::setCS2(double val)
+{
+	this->CS2 = val;
+}
+
+void Node::setCS3(double val)
+{
+	this->CS3 = val;
+}
+
+void Node::setU(double val)
+{
+	this->U = val;
+	
+}
+
+double Node::getCS1()
+{
+	return this->CS1;
+}
+
+double Node::getCS2()
+{
+	return this->CS2;
+}
+
+double Node::getCS3()
+{
+	return this->CS3;
+}
+
+double Node::getSL()
+{
+	return this->SL;
+}
+
+double Node::getSR()
+{
+	return this->SR;
+}
+
+double Node::getU()
+{
+	
+}
+
+
+
+
+
+
+
+
+
