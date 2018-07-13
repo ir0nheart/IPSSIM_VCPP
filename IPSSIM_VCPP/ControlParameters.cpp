@@ -5070,7 +5070,7 @@ void ControlParameters::ELEMN3(){
 				}
 			}
 
-			Writer * logWriter = Writer::ELEInstance();
+		/*	Writer * logWriter = Writer::ELEInstance();
 			string logLine = "";
 			char buff[512];
 			_snprintf(buff, sizeof(buff), "Element %9d", el);
@@ -5109,7 +5109,7 @@ void ControlParameters::ELEMN3(){
 				}
 			}
 
-			logWriter->writeContainer.push_back(logLine);
+			logWriter->writeContainer.push_back(logLine);*/
 		
 			if (KSOLVP == 0){
 				GLOBAN();
@@ -5471,9 +5471,9 @@ void ControlParameters::NODAL()
 		IUNSAT = 1;
 
 	if (KSOLVP == 0)
-		JMID = NBHALF;
+		JMID = NBHALF-1;
 	else
-		JMID = 1;
+		JMID = 0;
 
 	// DO NOT UPDATE NODAL PARAMETERS ON A TIME STEP WHEN ONLY U IS SOLVED FOR BY BACK SUBSTITION (I.E. WHEN NOUMAT = 1)
 	if (NOUMAT <= 0)
@@ -5509,7 +5509,7 @@ void ControlParameters::NODAL()
 	for (int i = 1; i <= NN; i++)
 	{
 		if (KSOLVP == 0)
-			IMID = i;
+			IMID = i-1;
 		else
 			IMID = JA(i - 1);
 
@@ -5518,14 +5518,103 @@ void ControlParameters::NODAL()
 		if ((ML - 1) <= 0)
 		{
 			//AFLN = (1 - ISSFLO / 2)*(SWRHON * nodeContainer[i]->getSOP() + nodeContainer[i]->getPorosity()*nodeContainer[i]->getSWB*)
-			if ((ML - 1) < 0)
+			double term1, term2, term3, term4, term5;
+			double AFLN, CFLN, DUDT;
+			term2 = PSTAR + nodeContainer[i]->getPITER();
+			term1 = nodeContainer[i]->getDSWDP() + nodeContainer[i]->getSW()*(1.0 - nodeContainer[i]->getSWB() / term2);
+			term3 = nodeContainer[i]->getVOL() / DELTP;
+			AFLN = (1 - ISSFLO / 2)*(SWRHON * nodeContainer[i]->getSOP() + nodeContainer[i]->getPorosity()*nodeContainer[i]->getSWB() * term1)*term3;
+			CFLN = nodeContainer[i]->getPorosity() * nodeContainer[i]->getSWT()*DRWDU*nodeContainer[i]->getVOL();
+			DUDT = (1 - ISSFLO / 2)*(nodeContainer[i]->getUM1() - nodeContainer[i]->getUM2()) / DLTUM1;
+			CFLN = CFLN*DUDT - (nodeContainer[i]->getSW()*GCONST*TEMP*nodeContainer[i]->getPorosity()*nodeContainer[i]->getRHO()*(pow(nodeContainer[i]->getSWB(), 2) / term2)*(0.5*-1 * PRODF1*(nodeContainer[i]->getRHO()*nodeContainer[i]->getUITER() / SMWH)))*nodeContainer[i]->getVOL();
+			PMAT(IMID, JMID) = PMAT(IMID, JMID) + AFLN;
+			nodePVEC[i] = nodePVEC[i] - CFLN + AFLN * nodeContainer[i]->getPM1() + nodeContainer[i]->getQIN();
+
+			if ((ML - 1) == 0)
+				continue;
+
+
+			double EPRS, ATRN, GTRN, GSV, GSLTRN, GSRTRN, ETRN, QUR, QUL;
+
+			EPRS = (1.0 - nodeContainer[i]->getPorosity())*RHOS;
+			ATRN = (1 - ISSTRA)*(nodeContainer[i]->getPorosity()*SWRHON*CW + EPRS * nodeContainer[i]->getCS1())*nodeContainer[i]->getVOL() / DELTU;
+			GTRN = nodeContainer[i]->getPorosity()*SWRHON*PRODF1*nodeContainer[i]->getVOL();
+			GSV = EPRS*PRODS1*nodeContainer[i]->getVOL();
+			GSLTRN = GSV * nodeContainer[i]->getSL();
+			GSRTRN = GSV * nodeContainer[i]->getSR();
+			ETRN = (nodeContainer[i]->getPorosity()*SWRHON*PRODF0 + EPRS*PRODS0)*nodeContainer[i]->getVOL();
+
+			QUR = 0;
+			QUL = 0;
+			if (nodeContainer[i]->getQINITR() <= 0)
 			{
-				
+				if (NOUMAT <= 0)
+				{
+					UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;;
+					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
+				}
+				else
+				{
+					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
+				}
 			}
+			else
+			{
+				QUL = -CW*nodeContainer[i]->getQINITR();
+				QUR = -QUL * nodeContainer[i]->getUIN();
+				if (NOUMAT <= 0)
+				{
+					UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;;
+					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
+				}
+				else
+				{
+					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
+				}
+			}
+
+			
 		}
 		else
 		{
-			//EPRS
+			double EPRS, ATRN, GTRN, GSV, GSLTRN, GSRTRN, ETRN, QUR, QUL;
+
+			EPRS = (1.0 - nodeContainer[i]->getPorosity())*RHOS;
+			ATRN = (1 - ISSTRA)*(nodeContainer[i]->getPorosity()*SWRHON*CW + EPRS * nodeContainer[i]->getCS1())*nodeContainer[i]->getVOL() / DELTU;
+			GTRN = nodeContainer[i]->getPorosity()*SWRHON*PRODF1*nodeContainer[i]->getVOL();
+			GSV = EPRS*PRODS1*nodeContainer[i]->getVOL();
+			GSLTRN = GSV * nodeContainer[i]->getSL();
+			GSRTRN = GSV * nodeContainer[i]->getSR();
+			ETRN = (nodeContainer[i]->getPorosity()*SWRHON*PRODF0 + EPRS*PRODS0)*nodeContainer[i]->getVOL();
+
+			QUR = 0;
+			QUL = 0;
+			if (nodeContainer[i]->getQINITR() <= 0)
+			{
+				if (NOUMAT <= 0)
+				{
+					UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;;
+					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
+				}
+				else
+				{
+					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
+				}
+			}
+			else
+			{
+				QUL = -CW*nodeContainer[i]->getQINITR();
+				QUR = -QUL * nodeContainer[i]->getUIN();
+				if (NOUMAT <= 0)
+				{
+					UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;;
+					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
+				}
+				else
+				{
+					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
+				}
+			}
 		}
 	}
 
@@ -5536,11 +5625,11 @@ void ControlParameters::BC()
 {
 	if (KSOLVP == 0)
 	{
-		JMID = NBHALF;
+		JMID = NBHALF-1;
 	}
 	else
 	{
-		JMID = 1;
+		JMID = 0;
 	}
 	int ml_Case;
 
@@ -5565,11 +5654,11 @@ void ControlParameters::BC()
 			ind = abs(IPBC[i]);
 			if (KSOLVP == 0)
 			{
-				IMID = ind;
+				IMID = ind-1;
 			}
 			else
 			{
-				IMID = JA(ind);
+				IMID = JA(ind-1);
 			}
 
 
@@ -5668,11 +5757,11 @@ void ControlParameters::BC()
 					jnd = abs(IUBC[jnd]);
 					if (KSOLVP == 0)
 					{
-						IMID = jnd;
+						IMID = jnd-1;
 					}
 					else
 					{
-						IMID = JA(jnd);
+						IMID = JA(jnd-1);
 					}
 
 					if (NOUMAT > 0)
