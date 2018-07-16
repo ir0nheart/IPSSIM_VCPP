@@ -107,7 +107,7 @@ public:
 	void SOURCE1(double& QIN1, double& UIN1, double IQSOP1, double& QUIN1, double IQSOU1, double& IQSOPT1, double& IQSOUT1, int NSOP1, int NSOU1, string BCSID);
 	void BOUND1(int NPBC1, int NUBC1, int NBCN1, string BCSID);
 	void loadInitialConditions();
-
+	void solveTimeStep();
 	void findObservationElementThread();
 	void Source(string key); // READ SOURCE
 	//void addDataSet(string dataSet, string dataSetName);
@@ -115,7 +115,7 @@ public:
 	void parseDataSet_15B();
 	void parseDataSet_8D();
 	void setParameters();
-
+	double DNRM2(int N, double* X, int INCX);
 	const string VERN = "2.2";
 	void exitOnError(string ERRCOD, vector<string>CHERR = vector<string>());
 	void writeToLSTString(string str);
@@ -411,7 +411,11 @@ public:
 	void setATMDF(double val);
 	void setATMNF(double val);
 	void setANGFAC(double val);
-	double getPMAXFA();
+	void setIGOI(int val);
+	void setIERR(double val);
+	void setISTOP(int val);
+
+	double getPMAXFA();;
 	double getPMIDFA();
 	double getPMINFA();
 	double getANG1FA();
@@ -479,9 +483,15 @@ public:
 	void setOnceOBS(bool val);
 	void setTIME(double val);
 	double getTIME();
+	void solveEquation(int KPU,int KSOLVR, MatrixXd PMAT, double * nodePVEC,double &IERR,double &ITRS,double & ERR);
+	void SOLVEB(int KMT, MatrixXd PMAT, double* nodePVEC);
+	void SOLWRP(int KPU, int KSOLVR,MatrixXd PMAT, double * nodePVEC);
 
 	void setML(int val);
 	int getML();
+	int getIGOI();
+	int getISTOP();
+	double getIERR();
 	double getDLTPM1();
 	double getDLTUM1();
 	double getBDELP1();
@@ -592,7 +602,12 @@ private:
 	double SCALX, SCALY, SCALZ, PORFAC;
 	double PMAXFA, PMIDFA, PMINFA, ANG1FA, ANG2FA, ANG3FA, ALMAXF, ALMIDF, ALMINF, ATMXF, ATMDF, ATMNF,ANGFAC;
 	int NBCN, NOBSN, N48, NEX, NIN, NNNX, NDIMJA, NNVEC;
-	
+	int ISYM, ITOL, NSAVE, ITRMX;
+	double TOL;
+
+	void DSICCG();
+	void DSLUOM();
+	void DSLUGM();
 	ControlParameters();
 	ControlParameters(ControlParameters const&){};
 	ControlParameters& operator = (ControlParameters const&){};
@@ -862,5 +877,14 @@ private:
 	int INTIM = 0;
 	int ISTOP = 0;
 	vector<vector<int>> nodeNeighbors;
+
+
+	int IHALFB;
+	int KSOLVR, KMT, KPU;
+	double IERRU, IERRP,IERR;
+	double CNUB, CNUBM1;
+	double RP, RU;
+	int IGOI;
+	double ERRP, ERRU, ITRSP, ITRSU;
 };
 #endif

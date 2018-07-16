@@ -138,6 +138,37 @@ int ControlParameters::getTimeStepDivide(){
 	return this->timeStepDivide;
 }
 
+void ControlParameters::setIGOI(int val)
+{
+	this->IGOI = val;
+}
+void ControlParameters::setIERR(double val)
+{
+	this->IERR = val;
+}
+
+void ControlParameters::setISTOP(int val)
+{
+	this->ISTOP = val;
+}
+
+
+double ControlParameters::getIERR()
+{
+	return this->IERR;
+}
+
+int ControlParameters::getIGOI()
+{
+	return this->IGOI;
+}
+
+int ControlParameters::getISTOP()
+{
+	return this->ISTOP;
+}
+
+
 void ControlParameters::setNumberOfLayers(int nnLayers){
 	this->numberOfLayers = nnLayers;
 }
@@ -6664,4 +6695,269 @@ void ControlParameters::setITERPARAMS3(){
 		node->setUM2(node->getUM1());
 		node->setUM1(node->getUVEC());
 	}
+}
+
+double ControlParameters::DNRM2(int N, double* X, int INCX)
+{	
+	double NORM, SSQ, SCALE;
+	double ABSXI;
+	NORM = 0.0;
+	if (N < 1 || INCX < 1)
+	{
+		NORM = 0.0;
+	}
+	else if (N == 1)
+	{
+		NORM = abs(X[0]);
+	}
+	else
+	{
+		SCALE = 0.0;
+		SSQ = 1.0;
+
+		for (int it = 1; it <= (1 + (N - 1)*INCX); it += INCX)
+		{
+			if (X[it] != 0.0)
+			{
+				ABSXI = abs(X[it]);
+				if (SCALE < ABSXI)
+				{
+					SSQ = 1.0 + SSQ * pow(SCALE / ABSXI, 2);
+					SCALE = ABSXI;
+				}
+				else
+				{
+					SSQ = SSQ + pow(ABSXI / SCALE, 2);
+				}
+			}
+		}
+		NORM = SCALE * sqrt(SSQ);
+	}
+	return NORM;
+}
+
+
+void ControlParameters::solveEquation(int KPU,int KSOLVR,MatrixXd MAT, double * nodeVEC,double& IERR,double& ITRS,double& ERR){
+	//SUBROUTINE SOLVER(KMT,KPU,KSOLVR,C,R,XITER,B,NNP,IHALFB,MAXNP, MAXBW, IWK, FWK, IA, JA, IERR, ITRS, ERR)
+	char* KPUTEXT[2] = { "P", "U" };
+	double RHSNRM = DNRM2(NNVEC, nodeVEC, 1);
+	if (RHSNRM == 0.0)
+	{
+		IERR = 0;
+		ITRS = 0;
+		ERR = 0;
+		for (int i = 1; i <= NN; i++)
+		{
+			nodeVEC[i] = 0.0;
+		}
+
+		cout << "       " << KPUTEXT[KPU] << "-solution (" << KPUTEXT[KPU] << "= 0) inferred from matrix equation A*" << KPUTEXT[KPU] << "=0; solver not called." << endl;
+		return;
+	}
+	cout << "       Starting " << KPUTEXT[KPU] << "-solution using " << SOLWRD[KSOLVR] << " solver.." << endl;
+
+	if (KSOLVR == 0)
+	{
+		SOLVEB(KMT, MAT, nodeVEC);
+		IERR = 0;
+		ITRS = 0;
+		ERR = 0;
+	}
+	else
+	{
+		SOLWRP(KPU, KSOLVR, MAT, nodeVEC);
+	}
+
+}
+
+void ControlParameters::SOLVEB(int KMT, MatrixXd MAT, double * nodeVEC)
+{
+	
+}
+
+void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd MAT, double * nodeVEC)
+{
+	//SOLWRP(KPU, KSOLVR, A, R, XITER, B, NNP,IWK, FWK, IA, JA, IERR, ITRS, ERR)
+	//SOLWRP(KPU, KSOLVR, C, R, XITER, B, NNP, IWK, FWK, IA, JA, IERR, ITRS, ERR)
+
+
+		//COPY THE RHS VECTOR R INTO VECTOR B, THEN USE R AS THE
+		//SOLUTION VECTOR.INITIALIZE IT FROM THE LATEST SUTRA
+		//SOLUTION.XITER IS NOT USED AS THE SOLUTION VECTOR BECAUSE
+		//DOING SO MIGHT INTERFERE WITH SUBSEQUENT CALCULATIONS.
+
+	double * B = new double[NN + 1]{};
+	for (int i = 1; i <= NN; i++)
+	{
+		B[i] = nodeVEC[i];
+		nodeVEC[i] = nodeContainer[i]->getPITER();
+	}
+
+	if (KPU == 1)
+	{
+		ISYM = 0;
+		ITRMX = max(ITRMXP, 1);
+		ITOL = ITOLP;
+		TOL = TOLP;
+		NSAVE = NSAVEP;
+	}
+	else
+	{
+		ISYM = 0;
+		ITRMX = max(ITRMXU, 1);
+		ITOL = ITOLU;
+		TOL = TOLU;
+		NSAVE = NSAVEU;
+	}
+
+	if (KSOLVR == 1)
+	{
+		DSICCG();
+	}
+	else if (KSOLVR == 2)
+	{
+		DSLUGM();
+	}
+	else
+	{
+		DSLUOM();
+	}
+
+}
+void ControlParameters::solveTimeStep()
+{
+	IHALFB = NBHALF - 1;
+	IERRP = 0;
+	IERRU = 0;
+
+	if ((ML - 1) <= 0)
+	{
+		KMT = 0;
+		KPU = 1;
+		KSOLVR = KSOLVP;
+		//  SOLVER(KMT,KPU,KSOLVR,PMAT,PVEC,PITER,B,NN,IHALFB,NELT,NCBI,IWK, FWK, IA, JA, IERRP, ITRSP, ERRP)
+		solveEquation(KPU,KSOLVR,PMAT,nodePVEC,IERRP,ITRSP,ERRP);
+		// P solution is now in PVEC
+		onceP = true;
+
+		if (ISSFLO != 0)
+		{
+			for (int i = 1; i <= NN; i++)
+			{
+				nodeContainer[i]->setPM1(nodePVEC[i]);
+			}
+		}
+	}
+
+	if ((ML - 1) != 0)
+	{
+		KMT = 0;
+		KPU = 2;
+		KSOLVR = KSOLVU;
+		solveEquation(KPU,KSOLVR, UMAT, nodeUVEC, IERRU, ITRSU, ERRU);
+		// U solution is now in UVEC
+	}
+
+	IERR = abs(IERRP) + abs(IERRU);
+	CNUBM1 = CNUB;
+
+	for (int i = 1; i <= NN; i++)
+	{
+		double UEFF = max(nodeUVEC[i], 1e-10);
+		nodeContainer[i]->setCNUB(nodeContainer[i]->getCNUBM1() + (0.5*-PRODF1*(nodeContainer[i]->getRHO()*UEFF / SMWH))*DELTU);
+		if ((IUNSAT - 2) != 0)
+		{
+			nodeContainer[i]->setSW(1.0);
+			nodeContainer[i]->setRELK(1.0);
+			BUBSAT(nodeContainer[i]);
+		}
+		else
+		{
+			if (nodePVEC[i] >= 0)
+			{
+				nodeContainer[i]->setSW(1.0);
+				nodeContainer[i]->setRELK(1.0);
+				BUBSAT(nodeContainer[i]);
+			}
+			else
+			{
+				UNSAT(nodeContainer[i]);
+				BUBSAT(nodeContainer[i]);
+			}
+		}
+
+	}
+
+	//CHECK PROGRESS AND CONVERGENCE OF NON - LINEARITY ITERATIONS   
+	//AND SET STOP AND GO FLAGS : SUTRA........51800
+	//	ISTOP = -1   NOT CONVERGED - STOP SIMULATION                
+	//	ISTOP = 0   ITERATIONS LEFT OR CONVERGED - KEEP SIMULATING 
+	//	ISTOP = 1   LAST TIME STEP REACHED - STOP SIMULATION   
+	//	IGOI = 0   P AND U CONVERGED, OR NO ITERATIONS DONE
+	//	IGOI = 1   ONLY P HAS NOT YET CONVERGED TO CRITERION
+	//	IGOI = 2   ONLY U HAS NOT YET CONVERGED TO CRITERION
+	//	IGOI = 3   BOTH P AND U HAVE NOT YET CONVERGED TO CRITERIA  
+
+	ISTOP = 0;
+	IGOI = 0;
+	if (ITRMAX - 1 > 0)
+	{
+		RPM = 0;
+		RUM = 0;
+		IPWORS = 0;
+		IUWORS = 0;
+		if ((ML - 1) <= 0)
+		{
+			for (int i = 1; i <= NN; i++)
+			{
+				RP = abs(nodePVEC[i] - nodeContainer[i]->getPITER());
+				if ((RP - RPM) > 0)
+				{
+					RPM = RP;
+					IPWORS = i;
+				}
+			}
+			if (RPM > RPMAX)
+				IGOI = IGOI + 1;
+
+		}
+
+		if ((ML - 1) != 0)
+		{
+			for (int i = 1; i <= NN; i++)
+			{
+				RU = abs(nodeUVEC[i] - nodeContainer[i]->getUITER());
+				if ((RU - RUM) > 0)
+				{
+					RUM = RU;
+					IUWORS = i;
+				}
+			}
+			if (RUM > RUMAX)
+				IGOI = IGOI + 2;
+		}
+		char buff[1024];
+		_snprintf(buff, sizeof(buff), "       Maximum changes in P, U : %1.8e , %1.8e", RPM, RUM);
+		cout << buff << endl;
+		// write to K00;
+
+		
+
+	}
+
+
+}
+
+
+void ControlParameters::DSICCG()
+{
+	
+}
+void ControlParameters::DSLUGM()
+{
+
+}
+void ControlParameters::DSLUOM()
+{
+
 }

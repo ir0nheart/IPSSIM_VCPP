@@ -619,6 +619,14 @@ SH:
 	controlParameters->NODAL();
 	controlParameters->BC();
 
+	controlParameters->solveTimeStep();
+
+	if (controlParameters->getIGOI() > 0 && controlParameters->getITER() == controlParameters->getITRMAX())
+		controlParameters->setISTOP(-1);
+	if (controlParameters->getIGOI() > 0 && controlParameters->getISTOP() == 0 && controlParameters->getIERR() == 0)
+		goto BEGINITERATION;
+
+
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << " Total Passed time " << gent << " seconds" << endl;
 	lstWriterThread.join();
