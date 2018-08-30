@@ -6,6 +6,7 @@ Writer * Writer::mLST_pInstance = NULL;
 Writer * Writer::mNOD_pInstance = NULL;
 Writer * Writer::mELE_pInstance = NULL;
 Writer * Writer::mOBS_pInstance = NULL;
+Writer * Writer::mIA_pInstance = NULL;
 mutex mmtx;
 
 
@@ -28,6 +29,11 @@ Writer* Writer::OBSInstance(){
 	if (!mOBS_pInstance)
 		mOBS_pInstance = new Writer;
 	return mOBS_pInstance;
+}
+Writer* Writer::IAInstance(){
+	if (!mIA_pInstance)
+		mIA_pInstance = new Writer;
+	return mIA_pInstance;
 }
 void Writer::addToWriteContainer(string str){ 
 	lock_guard<mutex>guard(mmtx);

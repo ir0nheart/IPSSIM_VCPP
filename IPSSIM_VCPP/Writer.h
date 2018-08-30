@@ -12,6 +12,7 @@ public:
 	static Writer* NODInstance();
 	static Writer* ELEInstance();
 	static Writer* OBSInstance();
+	static Writer* IAInstance();
 	void addToWriteContainer(string str);
 	deque<string> getWriteContainer();
 	void popFrontWriteContainer();
@@ -24,6 +25,7 @@ private:
 	static Writer * mNOD_pInstance;
 	static Writer * mELE_pInstance;
 	static Writer * mOBS_pInstance;
+	static Writer * mIA_pInstance;
 };
 
 #endif

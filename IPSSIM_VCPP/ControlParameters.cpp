@@ -1,3 +1,5 @@
+
+#define VIENNACL_HAVE_EIGEN
 #include "ControlParameters.h"
 #include <iostream>
 #include <fstream>
@@ -6,12 +8,20 @@
 #include <stdarg.h>
 #include <stdlib.h>  
 #include <iostream>
-
-
+#include <viennacl/vector.hpp>
+#include <viennacl/compressed_matrix.hpp>
+#include <viennacl/linalg/ilu.hpp>
+#include <viennacl/linalg/gmres.hpp>
+#include <atomic>
+#include <Eigen/Sparse>
+#include <Eigen/IterativeLinearSolvers>
+#include <Eigen/OrderingMethods>
+#include <unsupported/Eigen/IterativeSolvers>
 
 using namespace std;
 using namespace Eigen;
-
+typedef SparseMatrix<double> SpMat;
+typedef Triplet<double> T;
 mutex mtx;
 int foundObs = 0;
 
@@ -60,6 +70,51 @@ enum Colors{
 	BRIGHT_YELLOW = 14,
 	BRIGHT_WHITE = 15
 };
+
+/**
+*  <h1>Defining Custom Monitors Functions for Iterative Solvers</h1>
+*  Custom monitors for the iterative solvers require two ingredients:
+*  First, a structure holding all the auxiliary data we want to reuse in the monitor.
+*  Second, a callback function called by the solver in each iteration.
+*
+*  In this example we define a callback-routine for printing the current estimate for the residual and compare it with the true residual.
+*  To do so, we need to pass the system matrix, the right hand side, and the initial guess to the monitor routine, which we achieve by packing pointers to these objects into a struct:
+**/
+template<typename MatrixT, typename VectorT>
+struct monitor_user_data
+{
+	monitor_user_data(MatrixT const & A, VectorT const & b, VectorT const & guess) : A_ptr(&A), b_ptr(&b), guess_ptr(&guess) {}
+
+	MatrixT const *A_ptr;
+	VectorT const *b_ptr;
+	VectorT const *guess_ptr;
+};
+
+/**
+*  The actual callback-routine takes the current approximation to the result as the first parameter, and the current estimate for the relative residual norm as second argument.
+*  The third argument is a pointer to our user-data, which in a first step cast to the correct type.
+*  If the monitor returns true, the iterative solver stops. This is handy for defining custom termination criteria, e.g. one-norms for the result change.
+*  Since we do not want to terminate the iterative solver with a custom criterion here, we always return 'false' at the end of the function.
+*
+*  Note to type-safety evangelists: This void*-interface is designed to be later exposed through a shared library ('libviennacl').
+*  Thus, user types may not be known at the point of compilation, requiring a void*-approach.
+**/
+template<typename VectorT, typename NumericT, typename MatrixT>
+bool my_custom_monitor(VectorT const & current_approx, NumericT residual_estimate, void *user_data)
+{
+	// Extract residual:
+	monitor_user_data<MatrixT, VectorT> const *data = reinterpret_cast<monitor_user_data<MatrixT, VectorT> const*>(user_data);
+
+	// Form residual r = b - A*x, taking an initial guess into account: r = b - A * (current_approx + x_initial)
+	VectorT x = current_approx + *data->guess_ptr;
+	VectorT residual = *data->b_ptr - viennacl::linalg::prod(*data->A_ptr, x);
+	VectorT initial_residual = *data->b_ptr - viennacl::linalg::prod(*data->A_ptr, *data->guess_ptr);
+
+	std::cout << "Residual estimate vs. true residual: " << residual_estimate << " vs. " << viennacl::linalg::norm_2(residual) / viennacl::linalg::norm_2(initial_residual) << std::endl;
+
+	return false; // no termination of iteration
+}
+
 const string ControlParameters::Headers[] = { "Node", "X", "Y", "Z", "Pressure", "Concentration", "Saturation", "Eff. Stress", "Stress Rat." };
 
 const string ControlParameters::SOLWRD[] = { "'DIRECT'", "'CG'", "'GMRES'", "'ORTHOMIN'" };
@@ -75,9 +130,12 @@ unordered_map<string, DataSet *> ControlParameters::getDataSetMap(){
 }
 
 void ControlParameters::createDataSets(){
-	char * dataSets[] = { "DataSet_1","DataSet_2A","DataSet_2B","DataSet_3","DataSet_4","DataSet_5","DataSet_6",
+	vector<string>dataSets{ "DataSet_1", "DataSet_2A", "DataSet_2B", "DataSet_3", "DataSet_4", "DataSet_5", "DataSet_6",
+		"DataSet_7A", "DataSet_7B", "DataSet_7C", "DataSet_8ABC", "DataSet_8D", "DataSet_8E_9_10_11", "DataSet_12_13_14A",
+		"DataSet_14B", "DataSet_15A", "DataSet_15B", "DataSet_17", "DataSet_18", "DataSet_19", "DataSet_20", "DataSet_22" };
+	/*char * dataSets[] = { "DataSet_1","DataSet_2A","DataSet_2B","DataSet_3","DataSet_4","DataSet_5","DataSet_6",
 		"DataSet_7A","DataSet_7B","DataSet_7C","DataSet_8ABC","DataSet_8D","DataSet_8E_9_10_11","DataSet_12_13_14A",
-		"DataSet_14B","DataSet_15A","DataSet_15B","DataSet_17","DataSet_18","DataSet_19","DataSet_20","DataSet_22"};
+		"DataSet_14B","DataSet_15A","DataSet_15B","DataSet_17","DataSet_18","DataSet_19","DataSet_20","DataSet_22"};*/
 	for (int i = 0; i < 22; i++){
 		DataSet* dataSet = new DataSet(dataSets[i]);
 		dataSetMap[dataSets[i]] = dataSet;
@@ -216,7 +274,6 @@ ControlParameters::ControlParameters()
 	nodeHeaders["'ES'"] = ControlParameters::Headers[7];
 	nodeHeaders["'RU'"] = ControlParameters::Headers[8];
 
-
 }
 
 
@@ -267,10 +324,15 @@ void ControlParameters::setParameters(){
 	}
 	cout << " parsing all data finished in " << t << " seconds" << endl;*/
 	// Parse Data Set 1
+	cout << "Parsing Data Set 1 .." << endl;
 	dataSetMap["DataSet_1"]->parseAllLines();
+	cout << "Done.. Parsing Data Set 1 took " << t << " seconds" << endl;
 
 	// Parse Data Set 2A
+	cout << "Parsing Data Set 2A .." << endl;
+	t.reset();
 	dataSetMap["DataSet_2A"]->parseAllLines();
+	cout << "Done.. Parsing Data Set 2A took " << t << " seconds" << endl;
 	logLine.append(string(133, '*'));
 	logLine.append("\n\n");
 	logLine.append(Miscellaneous::setLSTLine("* * * * *   I N D U C E D   P A R T I A L   S A T U R A T I O N   S I M U L A T I O N   * * * * *"));
@@ -281,8 +343,10 @@ void ControlParameters::setParameters(){
 	logLine.clear();
 
 	// Parse Data Set 2B
+	cout << "Parsing Data Set 2B .." << endl;
+	t.reset();
 	dataSetMap["DataSet_2B"]->parseAllLines();
-
+	cout << "Done.. Parsing Data Set 2B took " << t << " seconds" << endl;
 	logLine.append(string(133, '-') +"\n\n");
 	logLine.append(Miscellaneous::setLSTLine(TITLE1));
 	logLine.append("\n\n");
@@ -296,8 +360,9 @@ void ControlParameters::setParameters(){
 	InputFiles* inputFiles = InputFiles::Instance();
 	inputFiles->printInputFilesToLST();
 	// Read Simulation Properties
+	cout << "Parsing PROPS.INP file.." << endl;
+	t.reset();
 	inputFiles->readPropsINP();
-
 	logLine.append("\n\n\n\n\n");
 	logLine.append(string(11, ' ') + "D E F I N E D   L A Y E R   I N F O R M A T I O N\n\n");
 	logLine.append(string(13, ' ') + "LAYER NO \t UNIT WEIGHT \t TOP OF THE LAYER \t BOTTOM OF THE LAYER\n");
@@ -312,14 +377,19 @@ void ControlParameters::setParameters(){
 	logLine.append("\n\n\n\n");
 	logWriter->writeContainer.push_back(logLine);
 	logLine.clear();
-
+	cout << "Done.. Parsing Props.INP took " << t << " seconds" << endl;
 	
 	// ParseData Set 3
+	cout << "Parsing Data Set 3 .." << endl;
+	t.reset();
 	dataSetMap["DataSet_3"]->parseAllLines();
-
+	cout << "Done .. Parsing Data Set 3 took " << t << " seconds" << endl;
 	
 	// ParseData Set 4
+	cout << "Parsing Data Set 4 .." << endl;
+	t.reset();
 	dataSetMap["DataSet_4"]->parseAllLines();
+	cout << "Done .. Parsing Data Set 4 took " << t << " seconds" << endl;
 	
 	logLine.append(string(11, ' ') + "S I M U L A T I O N   M O D E   O P T I O N S\n\n");
 	if ((ISSTRA == 1) && (ISSFLO != 1)){
@@ -384,8 +454,10 @@ void ControlParameters::setParameters(){
 	logLine.clear();
 
 	// ParseData Set 5
+	cout << "Parsing Data Set 5 .." << endl;
+	t.reset();
 	dataSetMap["DataSet_5"]->parseAllLines();
-
+	cout << "Done .. Parsing Data Set 5 took " << t << " seconds" << endl;
 	logLine.append(string(11, ' ') + "N U M E R I C A L   C O N T R O L   D A T A\n\n");
 	_snprintf(buff, sizeof(buff), "           %1.8f \t 'UPSTREAM WEIGHTING FACTOR'\n", UP);
 	logLine.append(buff);
@@ -398,33 +470,51 @@ void ControlParameters::setParameters(){
 
 
 	// Data Set 6:
+	cout << "Parsing Data Set 6 .." << endl;
+	t.reset();
 	dataSetMap["DataSet_6"]->parseAllLines();
-
+	cout << "Done .. Parsing Data Set 6 took " << t << " seconds" << endl;
 	
 	//INPUT DATASET 7A : ITERATION CONTROLS FOR RESOLVING NONLINEARITIES
+	cout << "Parsing Data Set 7A .." << endl;
+	t.reset();
 	dataSetMap["DataSet_7A"]->parseAllLines();
-	
+	cout << "Done .. Parsing Data Set 7A took " << t << " seconds" << endl;
 	//INPUT DATASET 7b : MATRIX EQUATION SOLVER CONTROLS FOR PRESSURE
+	cout << "Parsing Data Set 7B .." << endl;
+	t.reset();
 	dataSetMap["DataSet_7B"]->parseAllLines();
-	
+	cout << "Done .. Parsing Data Set 7B took " << t << " seconds" << endl;
 
 	//INPUT DATASET 7c : MATRIX EQUATION SOLVER CONTROLS FOR TRANSPORT
+	cout << "Parsing Data Set 7C .." << endl;
+	t.reset();
 	dataSetMap["DataSet_7C"]->parseAllLines();
-
+	cout << "Done .. Parsing Data Set 7C took " << t << " seconds" << endl;
 	// SOME ALLOCATION IT MAY NOT NECESSARY FOR THIS PROGRAM
 
 	// INPUT DATASETS 8 to 15
 	// INPUT DATASET 8A:  OUTPUT CONTROLS AND OPTIONS FOR LST FILE and SCREEN
+	cout << "Parsing Data Set 8ABC .." << endl;
+	t.reset();
 	dataSetMap["DataSet_8ABC"]->parseAllLines();
-
+	cout << "Done .. Parsing Data Set 8ABC took " << t << " seconds" << endl;
 	// INPUT DATA  SET 8E: OUTPUT CONTROLS AND OPTIONS FOR BCOF,BCOP,BCOS and BCOU FILES
+	cout << "Parsing Data Set 8D .." << endl;
+	t.reset();
 	dataSetMap["DataSet_8D"]->parseAllLines();
-
+	cout << "Done .. Parsing Data Set 8D took " << t << " seconds" << endl;
 	// INPUT DATASET 8 E:
+	cout << "Parsing Data Sets 8E,9,10 and 11 .." << endl;
+	t.reset();
 	dataSetMap["DataSet_8E_9_10_11"]->parseAllLines();
-	// INPUT DATA SET 12 : PRODUCTION OF ENERGY OR SOLUTE MASS
-	dataSetMap["DataSet_12_13_14A"]->parseAllLines();
+	cout << "Done .. Parsing Data Sets 8E,,9,10 and 11 took " << t << " seconds" << endl;
 
+	// INPUT DATA SET 12 : PRODUCTION OF ENERGY OR SOLUTE MASS
+	cout << "Parsing Data Set 12,13 and 14A .." << endl;
+	t.reset();
+	dataSetMap["DataSet_12_13_14A"]->parseAllLines();
+	cout << "Done .. Parsing Data Sets 12,13 and 14A took " << t << " seconds" << endl;
 	// INPUT DATA SET 14b : NODEWISE DATA
 	//dataSetMap["DataSet_14B"]->parseAllLines();
 	parseDataSet_14B();
@@ -446,10 +536,12 @@ void ControlParameters::setParameters(){
 	}
 
 	// DATASETS 19 &20 (SPECIFIED P AND U BOUNDARY CONDITIONS
+	IPBCT = 1;
 	if (NPBC > 0){
 		//dataSetMap["DataSet_19"]->parseAllLines();
 		Bound("DataSet_19");
 	}
+	IUBCT = 1;
 	if (NUBC > 0){
 		//dataSetMap["DataSet_20"]->parseAllLines();
 		Bound("DataSet_20");
@@ -536,15 +628,19 @@ nodeY = new double[NN + 1];
 nodeZ = new double[NN + 1];
 nodeRegion = new int[NN + 1];
 nodeSOP = new double[NN + 1];
-nodePBC = new double[NN + 1]{};
-nodeUBC = new double[NN + 1]{};
+//nodePBC = new double[NN + 1]{};
+//nodeUBC = new double[NN + 1]{};
 nodeQIN = new double[NN + 1]{};
 nodeUIN = new double[NN + 1]{};
 nodeQUIN = new double[NN + 1]{};
 nodePVEC = new double[NN + 1]{};
 nodeUVEC = new double[NN + 1]{};
-nodeVOL = new double[NN + 1]{};
-
+//nodeVOL = new double[NN + 1]{};
+//nodeRHS = new double[NN]{};
+nodeVOL = vector<double>(NN + 1, 0);
+nodeRHS = vector<double>(NN + 1, 0);
+nodePBC = vector<double>(NN +1, 0);
+nodeUBC = vector<double>(NN +1, 0);
 nodeContainer.reserve(NN+1);
 
 Timer t;
@@ -900,9 +996,9 @@ void ControlParameters::Source(string key){
 				IQCP = stoi(strtok(lineBuffer.data(), del));
 				if (IQCP != 0){
 					if (IQCP > 0){
-						QINC = stod(strtok(lineBuffer.data(), del));
+						QINC = stod(strtok(NULL, del));
 						if (QINC > 0){
-							UINC = stod(strtok(lineBuffer.data(), del));
+							UINC = stod(strtok(NULL, del));
 						}
 						else{
 							UINC = 0.0;
@@ -982,7 +1078,7 @@ void ControlParameters::Source(string key){
 				IQCU = stoi(strtok(lineBuffer.data(), del));
 				if (IQCU != 0){
 					if (IQCU > 0){
-						QUINC = stod(strtok(lineBuffer.data(), del));
+						QUINC = stod(strtok(NULL, del));
 					}
 					else{
 						QUINC = 0.0;
@@ -1147,6 +1243,7 @@ void ControlParameters::Bound(string key){
 
 
 	if (key =="DataSet_19"){
+		
 		logLine.append("\n\n\n\n           S P E C I F I E D   P R E S S U R E   D A T A\n");
 		logLine.append("\n\n\n           **** NODES AT WHICH PRESSURES ARE SPECIFIED ****\n\n");
 		logLine.append("                (AS WELL AS SOLUTE CONCENTRATION OF ANY\n");
@@ -1176,6 +1273,7 @@ void ControlParameters::Bound(string key){
 				IDUM = stoi(strtok(lineBuffer.data(), del));
 				if (IDUM != 0){
 					IDUMA= abs(IDUM);
+					nodeContainer[IDUMA]->setGNUP1(GNUP);
 					if (IDUMA > NN){
 						exitOnError("INP-19-1");
 
@@ -1187,8 +1285,8 @@ void ControlParameters::Bound(string key){
 					if (IDUM > 0){
 						//aNode = nodeContainer[IDUM];
 						IPBC.push_back(IDUMA);
-						nodePBC[IDUMA] = stod(strtok(lineBuffer.data(), del));
-						nodeUBC[IDUMA] = stod(strtok(lineBuffer.data(), del));
+						nodePBC[IDUMA] = stod(strtok(NULL, del));
+						nodeUBC[IDUMA] = stod(strtok(NULL, del));
 						nodeContainer[IDUMA]->setPBCDef(true);
 						nodeContainer[IDUMA]->setUBCDef(true);
 						_snprintf(buff, sizeof(buff), "       %9d      %+20.13e      %+20.13e\n", IDUMA, nodePBC[IDUMA], nodeUBC[IDUMA]);
@@ -1260,7 +1358,7 @@ void ControlParameters::Bound(string key){
 
 					if (IDUM > 0){
 						IUBC.push_back(IDUMA);
-						nodeUBC[IDUMA]= stod(strtok(lineBuffer.data(), del));
+						nodeUBC[IDUMA]= stod(strtok(NULL, del));
 						nodeContainer[IDUMA]->setUBCDef(true);
 						_snprintf(buff, sizeof(buff), "       %9d      %+20.13e\n", IDUMA, nodeUBC[IDUMA]);
 						logLine.append(buff);
@@ -1558,6 +1656,22 @@ void ControlParameters::writeToOBSString(string str){
 	}
 }
 
+void ControlParameters::writeToIAString(string str){
+	string filename = InputFiles::Instance()->getInputDirectory() + "\\" +"IA.txt";
+	ofstream outfile;
+	if (!isNewIA){//is_file_exist(filename)){
+		outfile.open(filename, std::ios::app);
+
+		outfile << str << endl;
+
+	}
+	else{
+		outfile.open(filename, std::ios_base::out);
+
+		outfile << str << endl;
+		isNewIA = false;
+	}
+}
 
 
 void ControlParameters::popWriteContainer(){
@@ -2774,33 +2888,6 @@ void ControlParameters::createElements(){
 			elementContainer[i]->setGZET(new double[8]);
 			elementContainer[i]->setDET(new double[8]);
 
-
-
-		/*	elementContainer[i]->setF(new double*[8]);
-			elementContainer[i]->setW(new double*[8]);
-			elementContainer[i]->setDWDXG(new double*[8]);
-			elementContainer[i]->setDWDYG(new double*[8]);
-			elementContainer[i]->setDWDZG(new double*[8]);
-			elementContainer[i]->setDFDXG(new double*[8]);
-			elementContainer[i]->setDFDYG(new double*[8]);
-			elementContainer[i]->setDFDZG(new double*[8]);
-			elementContainer[i]->setVXG(new double[8]);
-			elementContainer[i]->setVYG(new double[8]);
-			elementContainer[i]->setVZG(new double[8]);
-			elementContainer[i]->setSWG(new double[8]);
-			elementContainer[i]->setSWTG(new double[8]);
-			elementContainer[i]->setSWBG(new double[8]);
-			elementContainer[i]->setRHOG(new double[8]);
-			elementContainer[i]->setVISCG(new double[8]);
-			elementContainer[i]->setPORG(new double[8]);
-			elementContainer[i]->setVGMAG(new double[8]);
-			elementContainer[i]->setCNUBG(new double[8]);
-			elementContainer[i]->setRGXG(new double[8]);
-			elementContainer[i]->setRGYG(new double[8]);
-			elementContainer[i]->setRGZG(new double[8]);
-			elementContainer[i]->setRELKG(new double[8]);
-			elementContainer[i]->setRELKTG(new double[8]);
-			elementContainer[i]->setRELKBG(new double[8]);*/
 		}
 	}
 	else if (KTYPE[0] == 2){
@@ -2855,6 +2942,13 @@ void ControlParameters::BANWID(){
 
 }
 void ControlParameters::loadBCS(){
+	BCSFL.reserve(ITMAX+1);
+	BCSTR.reserve(ITMAX+1);
+	for (int i = 0; i <= ITMAX; i++)
+	{
+		BCSFL.push_back(false);
+		BCSTR.push_back(false);
+	}
 	char * map = InputFileParser::Instance()->mapViewOfBCSFile;
 	char * start_str = map;
 	char * end_str;
@@ -2999,6 +3093,7 @@ void ControlParameters::loadBCS(){
 			j = j + 1;
 		} while (iNode != 0);
 
+	
 		cout << "BCS extracted for Time Step : " << bcsContainer[i]->getTimeStep() << endl;
 		i = i + 1;
 	}
@@ -3037,20 +3132,6 @@ void ControlParameters::loadInitialConditions(){
 			exitOnError("ICS-1-1");
 		}
 
-		/*bool neglectStr = false;
-		for (int i = whereat; i < size; i++){
-			if (map[i] == '#'){
-				start_str = map + i;
-				neglectStr = true;
-			}
-			if (neglectStr && (map[i] == '\r')){
-				end_str = map + i - 1;
-				start_str = map + i + 2;
-				whereat = i + 2;
-				break;
-			}
-		}*/
-
 		for (int j = whereat; j < size; j++){
 			if (map[j] == '\r'){
 				end_str = map + j;
@@ -3082,21 +3163,6 @@ void ControlParameters::loadInitialConditions(){
 				nodePVEC[lineCounter] = stod(strtok(lineBuffer.data(), del));
 			}
 		}
-			
-
-		/*neglectStr = false;
-		for (int i = whereat; i < size; i++){
-			if (map[i] == '#'){
-				start_str = map + i;
-				neglectStr = true;
-			}
-			if (neglectStr && (map[i] == '\r')){
-				end_str = map + i - 1;
-				start_str = map + i + 2;
-				whereat = i + 2;
-				break;
-			}
-		}*/
 
 		for (int j = whereat; j < size; j++){
 			if (map[j] == '\r'){
@@ -3356,209 +3422,6 @@ double ControlParameters::getTMONTH(){ return this->TMONTH; }
 double ControlParameters::getTYEAR(){ return this->TYEAR; }
 double ControlParameters::getDELT(){ return this->DELT; }
 double ControlParameters::getDELTM1(){ return this->DELTM1; }
-
-
-/*
-C     SUBROUTINE        O  U  T  L  S  T  3        SUTRA VERSION 2.2     OUTLST3........100
-C                                                                        OUTLST3........200
-C *** PURPOSE :                                                          OUTLST3........300
-C ***  TO PRINT PRESSURE AND TEMPERATURE OR CONCENTRATION                OUTLST3........400
-C ***  SOLUTIONS AND TO OUTPUT INFORMATION ON TIME STEP, ITERATIONS,     OUTLST3........500
-C ***  SATURATIONS, AND FLUID VELOCITIES FOR 3D PROBLEMS.                OUTLST3........600
-C ***  OUTPUT IS TO THE LST FILE.                                        OUTLST3........700
-C                                                                        OUTLST3........800
-SUBROUTINE OUTLST3(ML,ISTOP,IGOI,IERRP,ITRSP,ERRP,                 OUTLST3........900
-1   IERRU,ITRSU,ERRU,PVEC,UVEC,VMAG,VANG1,VANG2,SW,SWT,SWB)         OUTLST3.......1000!SWT and SWB added
-IMPLICIT DOUBLE PRECISION (A-H,O-Z)                                OUTLST3.......1100
-DIMENSION PVEC(NNVEC),UVEC(NNVEC),VMAG(NE),VANG1(NE),VANG2(NEX),   OUTLST3.......1200
-1   SW(NN),SWT(NN),SWB(NN),RELK(NN),RELKB(NN),RELKT(NN)             OUTLST3.......1300!SWT(NN)and SWB(NN) added
-DIMENSION KTYPE(2)                                                 OUTLST3.......1400
-COMMON /CONTRL/ GNUP,GNUU,UP,DTMULT,DTMAX,ME,ISSFLO,ISSTRA,ITCYC,  OUTLST3.......1500
-1   NPCYC,NUCYC,NPRINT,NBCFPR,NBCSPR,NBCPPR,NBCUPR,IREAD,           OUTLST3.......1600
-2   ISTORE,NOUMAT,IUNSAT,KTYPE                                      OUTLST3.......1700
-COMMON /DIMS/ NN,NE,NIN,NBI,NCBI,NB,NBHALF,NPBC,NUBC,              OUTLST3.......1800
-1   NSOP,NSOU,NBCN,NCIDB                                            OUTLST3.......1900
-COMMON /DIMX/ NWI,NWF,NWL,NELT,NNNX,NEX,N48                        OUTLST3.......2000
-COMMON /DIMX2/ NELTA,NNVEC,NDIMIA,NDIMJA                           OUTLST3.......2100
-COMMON /FUNITS/ K00,K0,K1,K2,K3,K4,K5,K6,K7,K8,K9,                 OUTLST3.......2200
-1   K10,K11,K12,K13,KAUX                                                 OUTLST3.......2300
-COMMON /ITERAT/ RPM,RPMAX,RUM,RUMAX,ITER,ITRMAX,IPWORS,IUWORS      OUTLST3.......2400
-COMMON /KPRBCS/ KINACT                                             OUTLST3.......2500
-COMMON /KPRINT/ KNODAL,KELMNT,KINCID,KPLOTP,KPLOTU,                OUTLST3.......2600
-1   KPANDS,KVEL,KCORT,KBUDG,KSCRN,KPAUSE                            OUTLST3.......2700
-COMMON /SOLVI/ KSOLVP,KSOLVU,NN1,NN2,NN3                           OUTLST3.......2800
-COMMON /TIMES/ DELT,TSEC,TMIN,THOUR,TDAY,TWEEK,TMONTH,TYEAR,       OUTLST3.......2900
-1   TMAX,DELTP,DELTU,DLTPM1,DLTUM1,IT,ITBCS,ITRST,ITMAX,TSTART      OUTLST3.......3000
-C                                                                        OUTLST3.......3100
-C.....OUTPUT MAJOR HEADINGS FOR CURRENT TIME STEP                        OUTLST3.......3200
-ITREL = IT - ITRST                                                 OUTLST3.......3300
-IF(ITREL.GT.0.OR.ISSFLO.EQ.2.OR.ISSTRA.EQ.1) GOTO 100              OUTLST3.......3400
-WRITE(K3,60)                                                       OUTLST3.......3500
-60 FORMAT('1'////11X,'I N I T I A L   C O N D I T I O N S',           OUTLST3.......3600
-1             /11X,'___________________________________')           OUTLST3.......3700
-IF(IREAD.EQ.-1) WRITE(K3,65) ITRST                                 OUTLST3.......3800
-65 FORMAT(//11X,'INITIAL CONDITIONS RETRIEVED FROM A RESTART',        OUTLST3.......3900
-1   ' FILE (WARM START)'                                            OUTLST3.......4000
-2   /11X,'THAT WAS SAVED AT THE END OF TIME STEP ',I8,' OF THE ',   OUTLST3.......4100
-3        'ORIGINAL SIMULATION.')                                    OUTLST3.......4200
-GOTO 500                                                           OUTLST3.......4300
-C                                                                        OUTLST3.......4400
-100 WRITE(K3,350) IT                                                   OUTLST3.......4500
-350 FORMAT('1'//11X,'RESULTS FOR TIME STEP ',I8/                       OUTLST3.......4600
-1   11X,'_______ ___ ____ ____ ________')                           OUTLST3.......4700
-C                                                                        OUTLST3.......4800
-IF(ITRMAX.GT.1) THEN                                               OUTLST3.......4900
-IF(IGOI.EQ.0) THEN                                              OUTLST3.......5000
-WRITE(K3,355) ITER                                           OUTLST3.......5100
-ELSE                                                            OUTLST3.......5200
-WRITE(K3,356) ITER                                           OUTLST3.......5300
-END IF                                                          OUTLST3.......5400
-355    FORMAT(/11X,'NON-LINEARITY ITERATIONS CONVERGED AFTER ',I5,     OUTLST3.......5500
-1      ' ITERATIONS')                                               OUTLST3.......5600
-356    FORMAT(/11X,'NON-LINEARITY ITERATIONS  N O T  CONVERGED',       OUTLST3.......5700
-1      ' AFTER ',I5,' ITERATIONS')                                  OUTLST3.......5800
-WRITE(K3,450) RPM,IPWORS,RUM,IUWORS                             OUTLST3.......5900
-450    FORMAT(11X,'MAXIMUM P CHANGE FROM PREVIOUS ITERATION ',         OUTLST3.......6000
-1      1PE14.5,' AT NODE ',I9/11X,'MAXIMUM U CHANGE FROM PREVIOUS', OUTLST3.......6100
-2      ' ITERATION ',1PE14.5,' AT NODE ',I9)                        OUTLST3.......6200
-END IF                                                             OUTLST3.......6300
-C                                                                        OUTLST3.......6400
-IF ((ML.EQ.0).OR.(ML.EQ.1)) THEN                                   OUTLST3.......6500
-IF (KSOLVP.EQ.0) THEN                                           OUTLST3.......6600
-WRITE(K3,452)                                                OUTLST3.......6700
-ELSE IF (IERRP.EQ.0) THEN                                       OUTLST3.......6800
-WRITE(K3,455) ITRSP, ERRP                                    OUTLST3.......6900
-ELSE                                                            OUTLST3.......7000
-WRITE(K3,456) ITRSP, ERRP                                    OUTLST3.......7100
-END IF                                                          OUTLST3.......7200
-END IF                                                             OUTLST3.......7300
-IF ((ML.EQ.0).OR.(ML.EQ.2)) THEN                                   OUTLST3.......7400
-IF (ML.EQ.2) WRITE(K3,*) ' '                                    OUTLST3.......7500
-IF (KSOLVU.EQ.0) THEN                                           OUTLST3.......7600
-WRITE(K3,453)                                                OUTLST3.......7700
-ELSE IF (IERRU.EQ.0) THEN                                       OUTLST3.......7800
-WRITE(K3,457) ITRSU, ERRU                                    OUTLST3.......7900
-ELSE                                                            OUTLST3.......8000
-WRITE(K3,458) ITRSU, ERRU                                    OUTLST3.......8100
-END IF                                                          OUTLST3.......8200
-END IF                                                             OUTLST3.......8300
-452 FORMAT(/11X,'P-SOLUTION COMPUTED USING DIRECT SOLVER')             OUTLST3.......8400
-453 FORMAT(11X,'U-SOLUTION COMPUTED USING DIRECT SOLVER')              OUTLST3.......8500
-455 FORMAT(/11X,'P-SOLUTION CONVERGED AFTER ',I5,' MATRIX'             OUTLST3.......8600
-1   ' SOLVER ITERATIONS; ESTIMATED ERROR ',1PE14.5)                 OUTLST3.......8700
-456 FORMAT(/11X,'P-SOLUTION  F A I L E D  AFTER ',I5,' MATRIX'         OUTLST3.......8800
-1   ' SOLVER ITERATIONS; ESTIMATED ERROR ',1PE14.5)                 OUTLST3.......8900
-457 FORMAT(11X,'U-SOLUTION CONVERGED AFTER ',I5,' MATRIX'              OUTLST3.......9000
-1   ' SOLVER ITERATIONS; ESTIMATED ERROR ',1PE14.5)                 OUTLST3.......9100
-458 FORMAT(11X,'U-SOLUTION  F A I L E D  AFTER ',I5,' MATRIX'          OUTLST3.......9200
-1   ' SOLVER ITERATIONS; ESTIMATED ERROR ',1PE14.5)                 OUTLST3.......9300
-C                                                                        OUTLST3.......9400
-500 IF(IT.EQ.0.AND.ISSFLO.EQ.2) GOTO 680                               OUTLST3.......9500
-IF(ISSTRA.EQ.1) GOTO 800                                           OUTLST3.......9600
-WRITE(K3,550) DELT,TSEC,TMIN,THOUR,TDAY,TWEEK,                     OUTLST3.......9700
-1   TMONTH,TYEAR                                                    OUTLST3.......9800
-550 FORMAT(///11X,'TIME INCREMENT :',T27,1PE15.4,' SECONDS'//11X,      OUTLST3.......9900
-1   'TIME AT END',3X,T27,1PE15.4,' SECONDS',/11X,'OF STEP:',6X,T27, OUTLST3......10000
-2   1PE15.4,' MINUTES'/T27,1PE15.4,' HOURS'/T27,1PE15.4,' DAYS'     OUTLST3......10100
-3   /T27,1PE15.4,' WEEKS'/T27,1PE15.4,' MONTHS'/T27,1PE15.4,        OUTLST3......10200
-4   ' YEARS')                                                       OUTLST3......10300
-C                                                                        OUTLST3......10400
-C.....OUTPUT PRESSURES FOR TRANSIENT FLOW SOLUTION (AND, POSSIBLY,       OUTLST3......10500
-C        SATURATION AND VELOCITY)                                        OUTLST3......10600
-IF(ML.EQ.2.AND.ISTOP.GE.0) GOTO 700                                OUTLST3......10700
-IF(ISSFLO.GT.0) GOTO 700                                           OUTLST3......10800
-IF (KPANDS.EQ.1) THEN                                              OUTLST3......10900
-WRITE(K3,650) (I,CUTSML(PVEC(I)),I=1,NN)                        OUTLST3......11000
-650    FORMAT(///11X,'P  R  E  S  S  U  R  E'                          OUTLST3......11100
-1      //2X,5(6X,'NODE',16X)/(2X,5(1X,I9,1X,1PE15.8)))              OUTLST3......11200
-WRITE(K3,651) (I,CUTSML(SWT(I)),I=1,NN)                        OUTLST3......11300! ASk about SW(I) again IF(IUNSAT.NE.0) deleted adn SW(I) changed to SWT(I)
-651    FORMAT(///11X,'S  A  T  U  R  A  T  I  O  N'                    OUTLST3......11400
-1      //2X,5(6X,'NODE',16X)/(2X,5(1X,I9,1X,1PE15.8)))              OUTLST3......11500
-END IF                                                             OUTLST3......11600
-IF(KVEL.EQ.1.AND.ITREL.GT.0) THEN                                  OUTLST3......11700
-WRITE(K3,655) (L,CUTSML(VMAG(L)),L=1,NE)                        OUTLST3......11800
-WRITE(K3,656) (L,CUTSML(VANG1(L)),L=1,NE)                       OUTLST3......11900
-WRITE(K3,657) (L,CUTSML(VANG2(L)),L=1,NE)                       OUTLST3......12000
-END IF                                                             OUTLST3......12100
-655 FORMAT(///11X,'F  L  U  I  D     V  E  L  O  C  I  T  Y'//         OUTLST3......12200
-1   11X,'M A G N I T U D E   AT CENTROID OF ELEMENT'//              OUTLST3......12300
-2   2X,5(3X,'ELEMENT',16X)/(2X,5(1X,I9,1X,1PE15.8)))                OUTLST3......12400
-656 FORMAT(///11X,'F  L  U  I  D     V  E  L  O  C  I  T  Y'//         OUTLST3......12500
-1   11X,'A N G L E 1   AT CENTROID OF ELEMENT, IN DEGREES FROM ',   OUTLST3......12600
-2   '+X-AXIS TO PROJECTION OF FLOW DIRECTION IN XY-PLANE'//         OUTLST3......12700
-3   2X,5(3X,'ELEMENT',16X)/(2X,5(1X,I9,1X,1PE15.8)))                OUTLST3......12800
-657 FORMAT(///11X,'F  L  U  I  D     V  E  L  O  C  I  T  Y'//         OUTLST3......12900
-1   11X,'A N G L E 2   AT CENTROID OF ELEMENT, IN DEGREES FROM ',   OUTLST3......13000
-2   'XY-PLANE TO FLOW DIRECTION'//                                  OUTLST3......13100
-3   2X,5(3X,'ELEMENT',16X)/(2X,5(1X,I9,1X,1PE15.8)))                OUTLST3......13200
-C     END IF                                                             OUTLST3......13300
-GOTO 700                                                           OUTLST3......13400
-C                                                                        OUTLST3......13500
-C.....OUTPUT PRESSURES FOR STEADY-STATE FLOW SOLUTION                    OUTLST3......13600
-680 IF (KPANDS.EQ.1) THEN                                              OUTLST3......13700
-WRITE(K3,690) (I,CUTSML(PVEC(I)),I=1,NN)                        OUTLST3......13800
-690    FORMAT(///11X,'S  T  E  A  D  Y  -  S  T  A  T  E     ',        OUTLST3......13900
-1      'P  R  E  S  S  U  R  E'//2X,5(6X,'NODE',16X)                OUTLST3......14000
-2      /(2X,5(1X,I9,1X,1PE15.8)))                                   OUTLST3......14100
-WRITE(K3,651) (I,CUTSML(SWT(I)),I=1,NN)                        OUTLST3......14200!Ask about SW(I) again
-END IF                                                             OUTLST3......14300
-GOTO 1000                                                          OUTLST3......14400
-C                                                                        OUTLST3......14500
-C.....OUTPUT CONCENTRATIONS OR TEMPERATURES FOR                          OUTLST3......14600
-C        TRANSIENT TRANSPORT SOLUTION                                    OUTLST3......14700
-700 IF(ML.EQ.1.AND.ISTOP.GE.0) GOTO 1000                               OUTLST3......14800
-IF (KCORT.EQ.1) THEN                                               OUTLST3......14900
-IF(ME) 720,720,730                                              OUTLST3......15000
-720    WRITE(K3,725) (I,CUTSML(UVEC(I)),I=1,NN)                        OUTLST3......15100
-725    FORMAT(///11X,'C  O  N  C  E  N  T  R  A  T  I  O  N'           OUTLST3......15200
-1      //2X,5(6X,'NODE',16X)/(2X,5(1X,I9,1X,1PE15.8)))              OUTLST3......15300
-GOTO 900                                                        OUTLST3......15400
-730    WRITE(K3,735) (I,CUTSML(UVEC(I)),I=1,NN)                        OUTLST3......15500
-735    FORMAT(///11X,'T  E  M  P  E  R  A  T  U  R  E'                 OUTLST3......15600
-1      //2X,5(6X,'NODE',16X)/(2X,5(1X,I9,1X,1PE15.8)))              OUTLST3......15700
-GOTO 900                                                        OUTLST3......15800
-END IF                                                             OUTLST3......15900
-C                                                                        OUTLST3......16000
-C.....OUTPUT CONCENTRATIONS OR TEMPERATURES FOR                          OUTLST3......16100
-C        STEADY-STATE TRANSPORT SOLUTION                                 OUTLST3......16200
-800 IF (KCORT.EQ.1) THEN                                               OUTLST3......16300
-IF(ME) 820,820,830                                              OUTLST3......16400
-820    WRITE(K3,825) (I,CUTSML(UVEC(I)),I=1,NN)                        OUTLST3......16500
-825    FORMAT(///11X,'S  T  E  A  D  Y  -  S  T  A  T  E     ',        OUTLST3......16600
-1      'C  O  N  C  E  N  T  R  A  T  I  O  N'                      OUTLST3......16700
-2      //2X,5(6X,'NODE',16X)/(2X,5(1X,I9,1X,1PE15.8)))              OUTLST3......16800
-GOTO 900                                                        OUTLST3......16900
-830    WRITE(K3,835) (I,CUTSML(UVEC(I)),I=1,NN)                        OUTLST3......17000
-835    FORMAT(///11X,'S  T  E  A  D  Y  -  S  T  A  T  E     ',        OUTLST3......17100
-1      'T  E  M  P  E  R  A  T  U  R  E'                            OUTLST3......17200
-2      //2X,5(6X,'NODE',16X)/(2X,5(1X,I9,1X,1PE15.8)))              OUTLST3......17300
-END IF                                                             OUTLST3......17400
-C                                                                        OUTLST3......17500
-C.....OUTPUT VELOCITIES FOR STEADY-STATE FLOW SOLUTION                   OUTLST3......17600
-900 IF(ISSFLO.NE.2.OR.IT.NE.1.OR.KVEL.NE.1) GOTO 1000                  OUTLST3......17700
-WRITE(K3,925) (L,CUTSML(VMAG(L)),L=1,NE)                           OUTLST3......17800
-WRITE(K3,950) (L,CUTSML(VANG1(L)),L=1,NE)                          OUTLST3......17900
-WRITE(K3,951) (L,CUTSML(VANG2(L)),L=1,NE)                          OUTLST3......18000
-925 FORMAT(///11X,'S  T  E  A  D  Y  -  S  T  A  T  E     ',           OUTLST3......18100
-1   'F  L  U  I  D     V  E  L  O  C  I  T  Y'//                    OUTLST3......18200
-2   11X,'M A G N I T U D E   AT CENTROID OF ELEMENT'//              OUTLST3......18300
-3   2X,5(3X,'ELEMENT',16X)/(2X,5(1X,I9,1X,1PE15.8)))                OUTLST3......18400
-950 FORMAT(///11X,'S  T  E  A  D  Y  -  S  T  A  T  E     ',           OUTLST3......18500
-1   'F  L  U  I  D     V  E  L  O  C  I  T  Y'//                    OUTLST3......18600
-2   11X,'A N G L E 1   AT CENTROID OF ELEMENT, IN DEGREES FROM ',   OUTLST3......18700
-3   '+X-AXIS TO PROJECTION OF FLOW DIRECTION IN XY-PLANE'//         OUTLST3......18800
-4   2X,5(3X,'ELEMENT',16X)/(2X,5(1X,I9,1X,1PE15.8)))                OUTLST3......18900
-951 FORMAT(///11X,'S  T  E  A  D  Y  -  S  T  A  T  E     ',           OUTLST3......19000
-1   'F  L  U  I  D     V  E  L  O  C  I  T  Y'//                    OUTLST3......19100
-2   11X,'A N G L E 2   AT CENTROID OF ELEMENT, IN DEGREES FROM ',   OUTLST3......19200
-3   'XY-PLANE TO FLOW DIRECTION'//                                  OUTLST3......19300
-4   2X,5(3X,'ELEMENT',16X)/(2X,5(1X,I9,1X,1PE15.8)))                OUTLST3......19400
-C                                                                        OUTLST3......19500
-1000 RETURN                                                             OUTLST3......19600
-C                                                                        OUTLST3......19700
-END                                                                OUTLST3......19800
-
-*/
 
 void ControlParameters::OUTLST3(int ML, int ISTOP,int IGOI, int IERRP,int ITRSP,double ERRP, int IERRU,int ITRSU,double ERRU ){
 	//args ML, ISTOP, IGOI, IERRP, ITRSP, ERRP, IERRU, ITRSU, ERRU, PVEC, UVEC, VMAG, VANG1, VANG2, SW, SWT, SWB
@@ -3820,8 +3683,7 @@ void ControlParameters::OUTNOD(){
 	//ISHORP.push_back(0);
 	//ISTORC.push_back(0);
 	//ISSATU.push_back(0);
-	BCSFL = new bool[ITMAX + 1]{};
-	BCSTR = new bool[ITMAX + 1]{};
+
 
 	string header = "\nNode              X              Y              Z       Pressure  Concentration     Saturation\n";
 
@@ -4049,8 +3911,7 @@ void ControlParameters::OUTOBS(){
 	vector<double> TT;
 	vector<int> DITT;
 	vector<int> ISHORP, ISTORC, ISSATU;
-	BCSFL = new bool[ITMAX + 1]{};
-	BCSTR = new bool[ITMAX + 1]{};
+
 
 	Schedule * tmp = nullptr;
 	if (onceOBS == false){
@@ -4941,38 +4802,73 @@ void ControlParameters::ELEMN3(){
 				}
 
 				
-				if (!(UP <= 1e-6)){
+				if ((UP <= 1e-6)){
 
+					if (SWTEST - 3.999 < 0){
+						for (int i = 0; i < 8; i++){
+							double RXXGD, RXYGD, RXZGD, RYXGD, RYYGD, RYZGD, RZXGD, RZYGD, RZZGD;
+							double DET = elementContainer[el]->getDET()[i];
+							double RDRX, RDRY, RDRZ;
+							RXXGD = RXXG[i] * DET;
+							RXYGD = RXYG[i] * DET;
+							RXZGD = RXZG[i] * DET;
+							RYXGD = RYXG[i] * DET;
+							RYYGD = RYYG[i] * DET;
+							RYZGD = RYZG[i] * DET;
+							RZXGD = RZXG[i] * DET;
+							RZYGD = RZYG[i] * DET;
+							RZZGD = RZZG[i] * DET;
+							RDRX = RXXGD * RGXG[i] + RXYGD*RGYG[i] + RXZGD*RGZG[i];
+							RDRY = RYXGD * RGXG[i] + RYYGD*RGYG[i] + RYZGD*RGZG[i];
+							RDRZ = RZXGD * RGXG[i] + RZYGD*RGYG[i] + RZZGD*RGZG[i];
 
-					for (int i = 0; i < 8; i++){
-						double RXXGD, RXYGD, RXZGD, RYXGD, RYYGD, RYZGD, RZXGD, RZYGD, RZZGD;
-						double DET = elementContainer[el]->getDET()[i];
-						double RDRX, RDRY, RDRZ;
-						RXXGD = RXXG[i] * DET;
-						RXYGD = RXYG[i] * DET;
-						RXZGD = RXZG[i] * DET;
-						RYXGD = RYXG[i] * DET;
-						RYYGD = RYYG[i] * DET;
-						RYZGD = RYZG[i] * DET;
-						RZXGD = RZXG[i] * DET;
-						RZYGD = RZYG[i] * DET;
-						RZZGD = RZZG[i] * DET;
-						RDRX = RXXGD * RGXG[i] + RXYGD*RGYG[i] + RXZGD*RGZG[i];
-						RDRY = RYXGD * RGXG[i] + RYYGD*RGYG[i] + RYZGD*RGZG[i];
-						RDRZ = RZXGD * RGXG[i] + RZYGD*RGYG[i] + RZZGD*RGZG[i];
+							for (int j = 0; j < 8; j++){
+								VOLE[j] = VOLE[j] + F[i][j] * DET;
+								DFLOWE[j] = DFLOWE[j] + RDRX*DWDXG[i][j] + RDRY*DWDYG[i][j] + RDRZ*DWDZG[i][j];
 
-						for (int j = 0; j < 8; j++){
-							VOLE[j] = VOLE[j] + F[i][j] * DET;
-							DFLOWE[j] = DFLOWE[j] + RDRX*DWDXG[i][j] + RDRY*DWDYG[i][j] + RDRZ*DWDZG[i][j];
+							}
 
+							for (int j = 0; j < 8; j++){
+								RDDFJX = RXXGD*DFDXG[i][j] + RXYGD*DFDYG[i][j] + RXZGD*DFDZG[i][j];
+								RDDFJY = RYXGD*DFDXG[i][j] + RYYGD*DFDYG[i][j] + RYZGD*DFDZG[i][j];
+								RDDFJZ = RZXGD*DFDXG[i][j] + RZYGD*DFDYG[i][j] + RZZGD*DFDZG[i][j];
+								for (int k = 0; k < 8; k++){
+									BFLOWE[i][k] = BFLOWE[i][k] + DWDXG[i][k] * RDDFJX + DWDYG[i][k] * RDDFJY + DWDZG[i][k] * RDDFJZ;
+								}
+							}
 						}
-						
-						for (int j = 0; j < 8; j++){
-							RDDFJX = RXXGD*DFDXG[i][j] + RXYGD*DFDYG[i][j] + RXZGD*DFDZG[i][j];
-							RDDFJY = RYXGD*DFDXG[i][j] + RYYGD*DFDYG[i][j] + RYZGD*DFDZG[i][j];
-							RDDFJZ = RZXGD*DFDXG[i][j] + RZYGD*DFDYG[i][j] + RZZGD*DFDZG[i][j];
-							for (int k = 0; k < 8; k++){
-								BFLOWE[i][k] = BFLOWE[i][k] + DWDXG[i][k] * RDDFJX + DWDYG[i][k] * RDDFJY + DWDZG[i][k] * RDDFJZ;
+					}else
+					{
+						for (int i = 0; i < 8; i++){
+							double RXXGD, RXYGD, RXZGD, RYXGD, RYYGD, RYZGD, RZXGD, RZYGD, RZZGD;
+							double DET = elementContainer[el]->getDET()[i];
+							double RDRX, RDRY, RDRZ;
+							RXXGD = RXXG[i] * DET;
+							RXYGD = RXYG[i] * DET;
+							RXZGD = RXZG[i] * DET;
+							RYXGD = RYXG[i] * DET;
+							RYYGD = RYYG[i] * DET;
+							RYZGD = RYZG[i] * DET;
+							RZXGD = RZXG[i] * DET;
+							RZYGD = RZYG[i] * DET;
+							RZZGD = RZZG[i] * DET;
+							RDRX = RXXGD * RGXG[i] + RXYGD*RGYG[i] + RXZGD*RGZG[i];
+							RDRY = RYXGD * RGXG[i] + RYYGD*RGYG[i] + RYZGD*RGZG[i];
+							RDRZ = RZXGD * RGXG[i] + RZYGD*RGYG[i] + RZZGD*RGZG[i];
+
+							for (int j = 0; j < 8; j++){
+								VOLE[j] = VOLE[j] + F[i][j] * DET;
+								DFLOWE[j] = DFLOWE[j] + RDRX*DFDXG[i][j] + RDRY*DFDYG[i][j] + RDRZ*DFDZG[i][j];
+
+							}
+
+							for (int j = 0; j < 8; j++){
+								RDDFJX = RXXGD*DFDXG[i][j] + RXYGD*DFDYG[i][j] + RXZGD*DFDZG[i][j];
+								RDDFJY = RYXGD*DFDXG[i][j] + RYYGD*DFDYG[i][j] + RYZGD*DFDZG[i][j];
+								RDDFJZ = RZXGD*DFDXG[i][j] + RZYGD*DFDYG[i][j] + RZZGD*DFDZG[i][j];
+								for (int k = 0; k < 8; k++){
+									BFLOWE[j][k] = BFLOWE[j][k] + DFDXG[i][k] * RDDFJX + DFDYG[i][k] * RDDFJY + DFDZG[i][k] * RDDFJZ;
+								}
 							}
 						}
 					}
@@ -5147,6 +5043,7 @@ void ControlParameters::ELEMN3(){
 			}
 			else{
 				GLOCOL(el, ML, VOLE, BFLOWE, DFLOWE, BTRANE, DTRANE);
+			
 			}
 		}
 
@@ -5361,19 +5258,20 @@ void ControlParameters::GLOCOL(int el, int ML, double VOLE[8], double BFLOWE[8][
 	int ib, jb,M;
 	ib = jb = M = -1;
 	for (int i = 0; i < N48; i++){
-		ib=elementContainer[el]->getElementNodes()[i];
+		ib=elementContainer[el]->getElementNodes()[i] -1;
 		nodeVOL[ib] = nodeVOL[ib] + VOLE[i];
-		nodePVEC[ib] = nodePVEC[ib] + DFLOWE[i];
+		//nodePVEC[ib] = nodePVEC[ib] + DFLOWE[i];
+		nodeRHS[ib] = nodeRHS[ib] + DFLOWE[i];
 
 		for (int j = 0; j < N48; j++)
 		{
 			jb = elementContainer[el]->getElementNodes()[j];
-			int MBEG = JA(jb-1)-1;
-			int MEND = JA(jb)-1 ;
+			int MBEG = JAVec[jb-1];
+			int MEND = JAVec[jb] ;
 
-			for (int k = MBEG; k <= MEND; k++)
+			for (int k = MBEG; k < MEND; k++)
 			{
-				if (ib == IA(k))
+				if (ib == IAVec[k])
 				{
 					M = k;
 					break;
@@ -5392,16 +5290,16 @@ void ControlParameters::GLOCOL(int el, int ML, double VOLE[8], double BFLOWE[8][
 			ib = jb = M = -1;
 			
 			for (int i = 0; i < N48; i++){
-				ib = elementContainer[el]->getElementNodes()[i];
+				ib = elementContainer[el]->getElementNodes()[i]-1;
 				for (int j = 0; j < N48; j++)
 				{
 					jb = elementContainer[el]->getElementNodes()[j];
-					int MBEG = JA(jb - 1) - 1;
-					int MEND = JA(jb) - 1;
+					int MBEG = JAVec[jb - 1];
+					int MEND = JAVec[jb];
 
-					for (int k = MBEG; k <= MEND; k++)
+					for (int k = MBEG; k < MEND; k++)
 					{
-						if (ib == IA(k))
+						if (ib == IAVec[k])
 						{
 							M = k;
 							break;
@@ -5542,7 +5440,7 @@ void ControlParameters::NODAL()
 		if (KSOLVP == 0)
 			IMID = i-1;
 		else
-			IMID = JA(i - 1);
+			IMID = JAVec[i - 1];
 
 		SWRHON = nodeContainer[i]->getSWT()*nodeContainer[i]->getRHO();
 
@@ -5552,14 +5450,15 @@ void ControlParameters::NODAL()
 			double term1, term2, term3, term4, term5;
 			double AFLN, CFLN, DUDT;
 			term2 = PSTAR + nodeContainer[i]->getPITER();
-			term1 = nodeContainer[i]->getDSWDP() + nodeContainer[i]->getSW()*(1.0 - nodeContainer[i]->getSWB() / term2);
-			term3 = nodeContainer[i]->getVOL() / DELTP;
-			AFLN = (1 - ISSFLO / 2)*(SWRHON * nodeContainer[i]->getSOP() + nodeContainer[i]->getPorosity()*nodeContainer[i]->getSWB() * term1)*term3;
-			CFLN = nodeContainer[i]->getPorosity() * nodeContainer[i]->getSWT()*DRWDU*nodeContainer[i]->getVOL();
+			term1 = (nodeContainer[i]->getDSWDP() + nodeContainer[i]->getSW()*(1.0 - nodeContainer[i]->getSWB())) / term2;
+			term3 = nodeVOL[i-1] / (TFINISH - TSTART);//DELTP;// nodeContainer[i]->getVOL() / DELTP;
+			AFLN = (1 - ISSFLO / 2)*(SWRHON * nodeContainer[i]->getSOP() + nodeContainer[i]->getPorosity()*nodeContainer[i]->getSWB() *nodeContainer[i]->getRHO()*term1)*term3;
+			CFLN = nodeContainer[i]->getPorosity() * nodeContainer[i]->getSWT()*DRWDU*nodeVOL[i-1];
 			DUDT = (1 - ISSFLO / 2)*(nodeContainer[i]->getUM1() - nodeContainer[i]->getUM2()) / DLTUM1;
 			CFLN = CFLN*DUDT - (nodeContainer[i]->getSW()*GCONST*TEMP*nodeContainer[i]->getPorosity()*nodeContainer[i]->getRHO()*(pow(nodeContainer[i]->getSWB(), 2) / term2)*(0.5*-1 * PRODF1*(nodeContainer[i]->getRHO()*nodeContainer[i]->getUITER() / SMWH)))*nodeContainer[i]->getVOL();
 			PMAT(IMID, JMID) = PMAT(IMID, JMID) + AFLN;
-			nodePVEC[i] = nodePVEC[i] - CFLN + AFLN * nodeContainer[i]->getPM1() + nodeContainer[i]->getQIN();
+			term4 = nodeRHS[i-1] - CFLN + AFLN * nodeContainer[i]->getPM1() + nodeContainer[i]->getQIN();
+			rhss.push_back(term4);
 
 			if ((ML - 1) == 0)
 				continue;
@@ -5689,7 +5588,7 @@ void ControlParameters::BC()
 			}
 			else
 			{
-				IMID = JA(ind-1);
+				IMID = JAVec[ind-1];
 			}
 
 
@@ -5700,7 +5599,7 @@ void ControlParameters::BC()
 					  GPINL  = - 1 * nodeContainer[ind]->getGNUP1();
 					  GPINR = nodeContainer[ind]->getGNUP1() * nodePBC[ind];
 					  PMAT(IMID, JMID) = PMAT(IMID, JMID) - GPINL;
-					  nodePVEC[ind] = nodePVEC[ind] + GPINR;
+					  rhss[ind-1] = rhss[ind-1] + GPINR;
 					  GUR = 0.0;
 					  GUL = 0.0;
 					  if (nodeContainer[ind]->getQPLITR() > 0)
@@ -6224,6 +6123,10 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 
 	iCJm = CJm.inverse();
 	//Calculate3 determinates in Global coordinates
+	double iCJM[3][3];
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			iCJM[i][j] = iCJm(i, j);
 
 	for (int i = 0; i < 8; i++){
 		DFDXG[node][i] = iCJm(0, 0)*DFDXL[i] + iCJm(0, 1)*DFDYL[i] + iCJm(0, 2)*DFDZL[i];
@@ -6572,13 +6475,10 @@ void ControlParameters::PTRSET(){
 }
 
 void ControlParameters::alpayPTR(){
-	Timer t,tgen;
 	nodeNeighbors.reserve(NN+1);
 	for (int i = 0; i <= NN; i++){
 		nodeNeighbors.push_back(vector<int>());
 	}
-	cout << t << endl;
-	t.reset();
 	for (int el = 1; el <= NE; el++){
 		for (int node = 0; node < N48; node++){
 			int nodeNum = elementNodes[el][node];
@@ -6591,59 +6491,28 @@ void ControlParameters::alpayPTR(){
 		}
 
 	}
-	cout << t << endl;
 
-	t.reset();
 	int NELTX = 0;
-	//for (int node = 1; node <= NN; node++){
-	//	unordered_set<int> s;
-	//	for (int i : nodeNeighbors[node])
-	//		s.insert(i);
-	//	nodeNeighbors[node].assign(s.begin(), s.end());
-	//	sort(nodeNeighbors[node].begin(), nodeNeighbors[node].end());
-	//	NELTX = NELTX + nodeNeighbors[node].size() + 1;
-	//}
-
 	for (int node = 1; node <= NN; node++){
 		sort(nodeNeighbors[node].begin(), nodeNeighbors[node].end());
 		nodeNeighbors[node].erase(unique(nodeNeighbors[node].begin(), nodeNeighbors[node].end()), nodeNeighbors[node].end());
 	 NELTX = NELTX + nodeNeighbors[node].size() + 1;
 	}
 
-	cout << t << endl;
-	cout << tgen << endl;
-	cout << "NELTX " << NELTX << endl; 
-	cout << " end " << endl;
 	NELT = NELTX;
-	IA = VectorXd::Zero(NELT);
-	JA = VectorXd::Zero(NN + 1);
 
-	int JASTART = 1;
-	for (int i = 1; i <= NN; i++){
-		JA(i-1) = JASTART;
-		IA(JASTART-1) = i;
-		int ind = 1;
-		for (int x : nodeNeighbors[i]){
-			IA(JASTART + ind -1) = x;
-			ind++;
+	int ctr = 0;
+	for (int i = 0; i < NN; i++)
+	{
+		JAVec.push_back(ctr);
+		IAVec.push_back(i);
+		for (int nodN : nodeNeighbors[i + 1])
+		{
+			IAVec.push_back(nodN-1);
 		}
-		JASTART = JASTART + nodeNeighbors[i].size() + 1;
+		ctr = ctr + nodeNeighbors[i + 1].size()+1;
 	}
-	JA(NN) = NELT + 1;
-
-	//int * IAA = new int[NELT + 1];
-	//int * JAA = new int[NN + 2];
-
-	//for (int i = 1; i <= NELT; i++){
-	//	IAA[i] = IA(i - 1);
-	//}
-	//for (int i = 1; i <= NN+1; i++){
-	//	JAA[i] = JA(i - 1);
-	//}
-
-	////-		IAA	0x000000005dc50070 {-842150451}	int *
-	////+		JAA	0x0000000061a30070 {-842150451}	int *
-
+	JAVec.push_back(NELT);
 
 }
 
@@ -6785,13 +6654,9 @@ void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd MAT, double * nodeV
 		//SOLUTION VECTOR.INITIALIZE IT FROM THE LATEST SUTRA
 		//SOLUTION.XITER IS NOT USED AS THE SOLUTION VECTOR BECAUSE
 		//DOING SO MIGHT INTERFERE WITH SUBSEQUENT CALCULATIONS.
+	
+	//double * B = new double[NN + 1]{};
 
-	double * B = new double[NN + 1]{};
-	for (int i = 1; i <= NN; i++)
-	{
-		B[i] = nodeVEC[i];
-		nodeVEC[i] = nodeContainer[i]->getPITER();
-	}
 
 	if (KPU == 1)
 	{
@@ -6816,7 +6681,73 @@ void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd MAT, double * nodeV
 	}
 	else if (KSOLVR == 2)
 	{
-		DSLUGM();
+		//
+		cout << " -- GMRES Method -- " << endl;
+		std::vector<map<unsigned int, double>> stl_A(NN,map<unsigned int,double>());
+		
+		vector<int> jJA;
+		jJA.reserve(PMAT.size());
+		int dif = 0;
+		int ctr = 0;
+		for (int j = 1; j < JAVec.size(); j++)
+		{
+			dif = JAVec[j] - JAVec[j - 1];
+		
+			for (int i = 0; i < dif; i++)
+			{
+				jJA.push_back(ctr);
+			}
+			ctr++;
+		}
+		cout << "Max Element in jJA " << *max_element(jJA.begin(), jJA.end()) << endl;
+		
+			for (int jk = 0; jk < IAVec.size(); jk++)
+			{
+				stl_A[jJA[jk]].emplace(IAVec[jk], PMAT(jk, 0));
+			}
+		
+		/*vector<T> triplets;
+		for (int i = 0; i < IAVec.size(); i++)
+		{
+			triplets.push_back(T(jJA[i], IAVec[i], PMAT(i, 0)));
+			if (i < 30)
+				cout << "PMAT " << i << " " << PMAT(i, 0) << endl;
+		}*/
+		viennacl::vector<double> vcl_rhs=viennacl::scalar_vector<double>(NN,0);
+		for (int i = 0; i < NN; i++)
+		{
+			vcl_rhs[i]=rhss[i];		
+		}
+	
+
+		
+	/*	Eigen::SparseMatrix<double> eigen_Sparsematrix(NN, NN);
+		eigen_Sparsematrix.setFromTriplets(triplets.begin(), triplets.end());
+*/
+		viennacl::compressed_matrix<double> A;
+		viennacl::copy(stl_A, A);
+
+		viennacl::linalg::ilu0_precond<viennacl::compressed_matrix<double>> ilu0(A, viennacl::linalg::ilu0_tag());
+		viennacl::linalg::gmres_tag my_gmres_tag(1e-13, 2000, 30);
+		viennacl::linalg::gmres_solver<viennacl::vector<double> > my_gmres_solver(my_gmres_tag);
+
+		std::clock_t start;
+		//viennacl::vector<double> vcl_rhs =viennacl::scalar_vector<double>(NN,0);
+		viennacl::vector<double> init_guess = viennacl::scalar_vector<double>(NN, double(0.9));
+		init_guess[0] = 0;
+		monitor_user_data<viennacl::compressed_matrix<double>, viennacl::vector<double> > my_monitor_data(A, vcl_rhs, init_guess);
+		my_gmres_solver.set_monitor(my_custom_monitor<viennacl::vector<double>, double, viennacl::compressed_matrix<double> >, &my_monitor_data);
+		my_gmres_solver.set_initial_guess(init_guess);
+		start = std::clock();
+		viennacl::vector<double> vcl_results = my_gmres_solver(A, vcl_rhs, ilu0);
+		std::cout << (std::clock() - start) / (double)CLOCKS_PER_SEC << " seconds.." << std::endl;
+		for (int i = 0; i < 30; i++)
+		{
+			cout << vcl_results[i] << endl;
+		}
+        cout << " done " << endl;
+		//viennacl::copy(stl_A, A);
+
 	}
 	else
 	{
@@ -6826,6 +6757,25 @@ void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd MAT, double * nodeV
 }
 void ControlParameters::solveTimeStep()
 {
+	//string filename = InputFiles::Instance()->getInputDirectory() + "\\" + "pmatOut.txt";
+	//ofstream outPmat;
+
+	//outPmat.open(filename, std::ios_base::out);
+	//outPmat << " PMAT will be below " << endl;
+	//for (int i = 0; i < PMAT.size(); i++)
+	//{
+	//	outPmat << PMAT(i, 0) << endl;
+	//}
+
+	string filename = InputFiles::Instance()->getInputDirectory() + "\\" + "rhs.txt";
+	ofstream rhsStream;
+
+	rhsStream.open(filename, std::ios_base::out);
+	rhsStream << rhss.size() << endl;
+	for (int i = 0; i < rhss.size(); i++)
+	{
+		rhsStream << rhss[i] << endl;
+	}
 	IHALFB = NBHALF - 1;
 	IERRP = 0;
 	IERRU = 0;
@@ -6836,6 +6786,13 @@ void ControlParameters::solveTimeStep()
 		KPU = 1;
 		KSOLVR = KSOLVP;
 		//  SOLVER(KMT,KPU,KSOLVR,PMAT,PVEC,PITER,B,NN,IHALFB,NELT,NCBI,IWK, FWK, IA, JA, IERRP, ITRSP, ERRP)
+
+
+
+
+
+
+
 		solveEquation(KPU,KSOLVR,PMAT,nodePVEC,IERRP,ITRSP,ERRP);
 		// P solution is now in PVEC
 		onceP = true;
@@ -6960,4 +6917,35 @@ void ControlParameters::DSLUGM()
 void ControlParameters::DSLUOM()
 {
 
+}
+
+void ControlParameters::freeDataSets()
+{
+	for (unordered_map<string, DataSet*>::iterator it = dataSetMap.begin(); it != dataSetMap.end(); ++it)
+	{
+		it->second->free();
+	}
+}
+
+bool ControlParameters::getBCSFL(int index)
+{
+	return this->BCSFL[index];
+}
+
+bool ControlParameters::getBCSTR(int index)
+{
+	return this->BCSTR[index];
+}
+
+void ControlParameters::printToFile(string fname)
+{
+	string filename = InputFiles::Instance()->getInputDirectory() + "\\" + fname;
+	ofstream rhsStream;
+
+	rhsStream.open(filename, std::ios_base::out);
+	rhsStream << rhss.size() << endl;
+	for (int i = 0; i < rhss.size(); i++)
+	{
+		rhsStream << rhss[i] << endl;
+	}
 }

@@ -16,7 +16,10 @@
 #include "Thread.h"
 #include "Writer.h"
 #include <mutex>
+#include <fstream>
 #include <chrono>
+
+#define VIENNACL_HAVE_EIGEN
 
 
 
@@ -24,14 +27,33 @@ mutex writeMutex;
 
 
 using namespace std;
+using namespace Eigen;
 
 class Node;
 
-
-
 class IPSSIM  {
 public:
-	IPSSIM(int ID) : myID(ID){} // 1 = LST , 2 = NOD , 3 ELE , 4 OBS;
+	IPSSIM(int ID) : myID(ID)
+	{
+		switch (myID)
+		{
+		case 1 :
+			cout << "LST FileWriter Thread is created and ready.." << endl;
+			break;
+		case 2:
+			cout << "NOD FileWriter Thread is created and ready.." << endl;
+			break;
+		case 3:
+			cout << "ELE FileWriter Thread is created and ready.." << endl;
+			break;
+		case 4:
+			cout << "OBS FileWriter Thread is created and ready.." << endl;
+			break;
+		case 5:
+			cout << "IA FileWriter Thread is created and ready.." << endl;
+			break;
+		}
+	} // 1 = LST , 2 = NOD , 3 ELE , 4 OBS;
 	virtual void  run() {
 		string str = "";
 		ControlParameters * CP = ControlParameters::Instance();
@@ -40,6 +62,7 @@ public:
 		case 2: wr = Writer::NODInstance();  break;
 		case 3: wr = Writer::ELEInstance();  break;
 		case 4: wr = Writer::OBSInstance();  break;
+		case 5: wr = Writer::IAInstance(); break;
 
 		}
 
@@ -58,50 +81,18 @@ public:
 					CP->writeToELEString(str);
 				if (myID == 4)
 					CP->writeToOBSString(str);
+				if (myID == 5)
+					CP->writeToIAString(str);
 
 						
 		}
 		this_thread::sleep_for(chrono::seconds(1));
 			goto RECHECK;
-		
-		
-		//return reinterpret_cast<void*>(myID);
 	}
 private:
 	int myID;
 	Writer * wr;
-
-
 };
-/*
-public:
-IPSSIM(int ID) : myID(ID) {}
-virtual void  run() {
-string str = "";
-ControlParameters * CP = ControlParameters::Instance();
-Writer * wr = Writer::Instance();
-RECHECK:
-if (wr->writeContainer.size() != 0){
-str = wr->writeContainer[0];
-writeMutex.lock();
-CP->writeToLSTString(str);
-wr->writeContainer.pop_front();
-writeMutex.unlock();
-}
-
-goto RECHECK;
-
-
-//return reinterpret_cast<void*>(myID);
-}
-private:
-int myID;
-void *pfi(string str);
-
-
-};
-
-*/
 
 // Windows console has a standard length of 80 characters for each line.
 
@@ -130,15 +121,16 @@ enum Colors{
 
 void main(){
 	Writer * logWriter = Writer::LSTInstance(); // Create Writer Class for Logging LST file
-	
 	// Create Two Timers : Used in Debugging. Timer t -> for elapsed time in a function, Timer gent -> Timer for total elapsed time
-	Timer t,gent;
+	Timer mainTimer,tempTimer;
 
+	
+	
+	// Create object for storing input and output file names.
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Creating storage object for input files" << endl;
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
-	InputFiles* inputFiles = InputFiles::Instance(); // Input Files Object
-	inputFiles->getPath();
+	InputFiles* inputFiles = InputFiles::Instance(); // Creates input-output storage object and sets path for current working directory
 	Miscellaneous::spacer();
 
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
@@ -147,23 +139,21 @@ void main(){
 	cout << "\t" << inputFiles->getInputDirectory() << endl;
 	Miscellaneous::spacer();
 
+
 	inputFiles->getFileList();
 	Miscellaneous::spacer();
-
-	//SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
-	//cout << "IPSSIM is creating required objects and checking files" << endl;
-	//Miscellaneous::spacer();
 		
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "IPSSIM will check if input files exists." << endl;
 
 	inputFiles->checkInputFiles();
 
-
+	Miscellaneous::spacer();
 	thread lstWriterThread = thread(&IPSSIM::run, new IPSSIM(1));
 	thread nodWriterThread = thread(&IPSSIM::run, new IPSSIM(2));
 	thread eleWriterThread = thread(&IPSSIM::run, new IPSSIM(3));
 	thread obsWriterThread = thread(&IPSSIM::run, new IPSSIM(4));
+	thread iaWriterThread = thread(&IPSSIM::run, new IPSSIM(5));
 
 	Miscellaneous::spacer();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
@@ -172,96 +162,84 @@ void main(){
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
 	ControlParameters* controlParameters = ControlParameters::Instance();
 	Miscellaneous::spacer();
-
-	/*double SWBG =0,   RELKBG=0,   PITERG=10,   CNUBG=1,   RELKTG=0,  SWTG=0,  SWG=0.9,   RELKG=1;
-	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
-	cout << "SWBG*	RELKBG*	 PITERG	 CNUBG	RELKTG*	 SWTG*	 SWG	RELKG" << endl;
-	cout << SWBG << " " << RELKBG << " " << PITERG << " " << CNUBG << " " << RELKTG << " " << SWTG << " " << SWG << " " << RELKG << endl;
-	controlParameters->BUBSAT(SWBG, RELKBG, PITERG, CNUBG, RELKTG, SWTG, SWG, RELKG);
-	cout << SWBG << " " << RELKBG << " " << PITERG << " " << CNUBG << " " << RELKTG << " " << SWTG << " " << SWG << " " << RELKG << endl;
-	cout << " Check up" << endl;*/
-
 	
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Creating Parser Object" << endl;
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
 	InputFileParser* inputParser = InputFileParser::Instance();
 	Miscellaneous::spacer();
-	t.reset();
+	tempTimer.reset();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Mapping INP File" << endl;
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
 	inputParser->mapToMemoryINP(inputFiles);
-	cout << "\t Mapping input file took " << t << " seconds" << endl;
+	cout << "\t Mapping input file took " << tempTimer << " seconds" << endl;
 	Miscellaneous::spacer();
-	t.reset();
+	tempTimer.reset();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Mapping ICS File" << endl;
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
 	inputParser->mapToMemoryICS(inputFiles);
-	cout << "\t Mapping ICS file took " << t << " seconds" << endl;
+	cout << "\t Mapping ICS file took " << tempTimer << " seconds" << endl;
 	Miscellaneous::spacer();
-	t.reset();
+	tempTimer.reset();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Creating DataSet..." << endl;
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
 	controlParameters->createDataSets();
-	cout << "\t Creating DataSets took " << t << " seconds" << endl;
+	cout << "\t Creating DataSets took " << tempTimer << " seconds" << endl;
 	Miscellaneous::spacer();
 
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Finding DataSet Positions in mapped File" << endl;
-	t.reset();
+	tempTimer.reset();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
 	inputParser->findDataSetPositionsInMap();
-	cout << "\t Finding DataSet Positions in input file took " << t << " seconds" << endl;
-
+	cout << "\t Finding DataSet Positions in input file took " << tempTimer << " seconds" << endl;
 	Miscellaneous::spacer();
+
+
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Parsing input file into DataSets and setting control parameters" << endl;
-	t.reset();
+	tempTimer.reset();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
-	
 	controlParameters->setParameters();
-	cout << "\t Parsing datasets and setting control parameters took " << t << " seconds" << endl;
-
-
+	cout << "\t Parsing datasets and setting control parameters took " << tempTimer << " seconds" << endl;
 	Miscellaneous::spacer();
+
+
 
 	
 	// Find the Element each Observation point is in.
 	// In components of Observation Points, overwrite node numbers and global coordinates
 	// with element numbers and local coordinates
-	t.reset();
+	tempTimer.reset();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Finding Observation Points in Elements" << endl;
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
 	controlParameters->findObservationElementThread();
 
-	cout << "\t Finding Observation Points " << t << " seconds" << endl;
+	cout << "\t Finding Observation Points " << tempTimer << " seconds" << endl;
 	Miscellaneous::spacer();
 
 	if (UnmapViewOfFile(inputParser->mapViewOfINPFile))
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_RED);
 	cout << "Unmapped Memory view of File " << endl;
 
-
+	// Release DataSets
+	controlParameters->freeDataSets();
 	Miscellaneous::spacer();
 
 	// IF ITERATIVE SOLVER IS USED, SET UP POINTER ARRAYS IA AND JA THAT SPECIFY
 	// MATRIX STRUCTURE IN "SLAP COLUMN FORMAT. DIMENSION NELT GETS SET HERE
 
 	if (controlParameters->getKSOLVP() != 0){
-		//controlParameters->PTRSET();
-
 		controlParameters->alpayPTR();
 	}
 	else{
 		controlParameters->setNELT(controlParameters->getNN());
 		int NDIMIA = 1;
 		// Allocate IA here
-
-
 	}
 
 	controlParameters->BANWID();
@@ -273,9 +251,6 @@ void main(){
 		inputParser->mapToMemoryBCS(inputFiles);
 		controlParameters->loadBCS();
 	}
-
-
-
 
 	// Read INITIAL OR RESTART CONDITIONS HERE
 /*	CALL INDAT2(PVEC, UVEC, PM1, UM1, UM2, CS1, CS2, CS3, SL, SR, RCIT, SW, SWT,DSWDP, PBC, IPBC, IPBCT, NREG, QIN,
@@ -291,37 +266,22 @@ void main(){
 		cout << "Unmapped Memory view of ICS File " << endl;
 	}
 
-	t.reset();
+	tempTimer.reset();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Creating Nodes" << endl;
 	controlParameters->createNodes();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
-	cout << "\t Nodes Created in " << t << " seconds" << endl;
+	cout << "\t Nodes Created in " << tempTimer << " seconds" << endl;
 	Miscellaneous::spacer();
 
-	t.reset();
+	tempTimer.reset();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Creating Elements" << endl;
 	controlParameters->createElements();
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
-	cout << "\t Elements Created in " << t << " seconds" << endl;
+	cout << "\t Elements Created in " << tempTimer << " seconds" << endl;
 	Miscellaneous::spacer();
 
-
-	/*MEMORYSTATUSEX statex;
-	statex.dwLength = sizeof (statex);
-	GlobalMemoryStatusEx(&statex);
-
-
-	_tprintf(TEXT("There is  %*ld percent of memory in use.\n"), WIDTH, statex.dwMemoryLoad);
-	_tprintf(TEXT("There are %*I64d total Mbytes of physical memory.\n"), WIDTH, statex.ullTotalPhys / DIV);
-	_tprintf(TEXT("There are %*I64d free Mbytes of physical memory.\n"), WIDTH, statex.ullAvailPhys / DIV);
-	_tprintf(TEXT("There are %*I64d total Mbytes of paging file.\n"), WIDTH, statex.ullTotalPageFile / DIV);
-	_tprintf(TEXT("There are %*I64d free Mbytes of paging file.\n"), WIDTH, statex.ullAvailPageFile / DIV);
-	_tprintf(TEXT("There are %*I64d total Mbytes of virtual memory.\n"), WIDTH, statex.ullTotalVirtual / DIV);
-	_tprintf(TEXT("There are %*I64d free Mbytes of virtual memory.\n"), WIDTH, statex.ullAvailVirtual / DIV);
-	_tprintf(TEXT("There are %*I64d free Mbytes of extended memory.\n"), WIDTH, statex.ullAvailExtendedVirtual / DIV);*/
-	
 	// Determine Maximum Simulation Time and Duration from Time Step Schedule
 	if (controlParameters->getISSTRA() == 0){
 		
@@ -424,10 +384,8 @@ BEGINTIMESTEP:
 	controlParameters->setNOUMAT(0);
 
 	// remove followign two lines
-	bool * BCSFL = new bool[controlParameters->getITMAX() + 1]{};
-	bool * BCSTR = new bool[controlParameters->getITMAX() + 1]{};
 	if (controlParameters->getOnceP() && (controlParameters->getITREL() > 2)){
-		if ((((controlParameters->getIT() - 1) % controlParameters->getNPCYC()) != 0) && !BCSFL[controlParameters->getIT() - 1] && !BCSFL[controlParameters->getIT()] && controlParameters->getITRMAX() == 1){
+		if ((((controlParameters->getIT() - 1) % controlParameters->getNPCYC()) != 0) && !controlParameters->getBCSFL(controlParameters->getIT() - 1) && !controlParameters->getBCSFL(controlParameters->getIT()) && controlParameters->getITRMAX() == 1){
 			controlParameters->setNOUMAT(1);
 		}
 	}
@@ -435,10 +393,10 @@ BEGINTIMESTEP:
 	if (controlParameters->getIT() == 1 && controlParameters->getISSFLO() == 2)
 		goto INCREMENT;
 
-	if (((controlParameters->getIT() % controlParameters->getNPCYC()) != 0) && !BCSFL[controlParameters->getIT()]){
+	if (((controlParameters->getIT() % controlParameters->getNPCYC()) != 0) && !controlParameters->getBCSFL(controlParameters->getIT())){
 		controlParameters->setML(2);
 	}
-	if (((controlParameters->getIT() % controlParameters->getNUCYC()) != 0) && !BCSTR[controlParameters->getIT()]){
+	if (((controlParameters->getIT() % controlParameters->getNUCYC()) != 0) && !controlParameters->getBCSTR(controlParameters->getIT())){
 		controlParameters->setML(1);
 	}
 
@@ -599,8 +557,10 @@ SH:
 	if (controlParameters->getITER() == 1 && controlParameters->getIBCT() != 4)
 		controlParameters->BCTIME();
 
-	if (controlParameters->getITER() == 1 && inputFiles->getBcsDef())
+	if (controlParameters->getITER() == 1 && inputFiles->getBcsDef()){
+		controlParameters->set_bcs(true);
 		controlParameters->BCSTEP();
+	}
 
 	if ((controlParameters->getML() != 1) && (controlParameters->getME() == -1) && (controlParameters->getNOUMAT() == 0) && (controlParameters->getADSMOD() != "'NONE'"))
 		controlParameters->ADSORB();
@@ -615,8 +575,10 @@ SH:
 		}
 		
 	}
+	controlParameters->printToFile(string("beforeNodal.txt"));
 
 	controlParameters->NODAL();
+	controlParameters->printToFile(string("beforeBC.txt"));
 	controlParameters->BC();
 
 	controlParameters->solveTimeStep();
@@ -628,7 +590,7 @@ SH:
 
 
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
-	cout << " Total Passed time " << gent << " seconds" << endl;
+	cout << " Total Passed time " << mainTimer << " seconds" << endl;
 	lstWriterThread.join();
 	nodWriterThread.join();
 	eleWriterThread.join();

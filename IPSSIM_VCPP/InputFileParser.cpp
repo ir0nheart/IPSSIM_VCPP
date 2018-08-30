@@ -73,6 +73,7 @@ void InputFileParser::findDataSetPositionsInMap(){
 	if (datPosStart.size() != datPosEnd.size()){
 		cout << "Check input file .. There are Errors" << endl;
 	}
+	
 
 	// pair data Set values
 	vector<pair<int, int>> dataSetLocation;
@@ -85,9 +86,6 @@ void InputFileParser::findDataSetPositionsInMap(){
 	dataSetOmit.push_back(dataSetLocation[4]);
 	dataSetOmit.push_back(dataSetLocation[12]);
 
-	/*dataSetLocation.erase(dataSetLocation.begin() + 2);
-	dataSetLocation.erase(dataSetLocation.begin() + 3);
-	dataSetLocation.erase(dataSetLocation.begin() + 10);*/
 	string linex;
 
 	//used for check
@@ -162,7 +160,6 @@ void InputFileParser::findDataSetPositionsInMap(){
 		}
 	}
 */
-
 }
 void InputFileParser::parseLinesFromMap(vector<DataSet *> dataSetContainer){
 	char *map = mapViewOfINPFile;
@@ -391,4 +388,6 @@ void InputFileParser::mapToMemoryBCS(InputFiles* inputFiles){
 		0);
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 10);
 	cout << "\t Successfully mapped BCS file." << endl;
+
+
 }

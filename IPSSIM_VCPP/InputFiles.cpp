@@ -46,6 +46,13 @@ InputFiles* InputFiles::Instance(){
 InputFiles::InputFiles()
 {
 	cout << " \t Storage object for required input files is created." << endl;
+	char result[MAX_PATH];
+	GetModuleFileNameA(0, result, MAX_PATH);
+	string strPath(result);
+	strPath = strPath.substr(0, strPath.find_last_of("\\"));
+	strPath.append("\\");
+	this->inputDir = strPath;
+	cout << " \t Current working directory is set to " << strPath.c_str() << endl;
 }
 
 
@@ -64,15 +71,10 @@ void InputFiles::exitOnError(){
  	exit(1);
 }
 
-void InputFiles::getPath()
+string InputFiles::getPath()
 {
-	char result[MAX_PATH];
-	GetModuleFileNameA(0, result, MAX_PATH);
-	string strPath(result);
-	strPath = strPath.substr(0, strPath.find_last_of("\\"));
-	strPath.append("\\");
-	this->inputDir = strPath;
 	
+	return this->inputDir;
 }
 
 string InputFiles::getInputDirectory(){

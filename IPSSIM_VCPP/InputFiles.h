@@ -10,7 +10,7 @@ class InputFiles
 {
 public:
 	static InputFiles* Instance();
-	void getPath();
+	string getPath();
 	void getFileList();
 	string getInputDirectory();
 	void exitOnError();

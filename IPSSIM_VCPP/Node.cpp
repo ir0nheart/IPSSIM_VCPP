@@ -4,7 +4,18 @@ using namespace std;
 
 Node::Node(){}
 Node::~Node(){}
-Node::Node(int NodeNumber){this->NodeNumber = NodeNumber;}
+Node::Node(int NodeNumber)
+{
+	this->NodeNumber = NodeNumber;
+	SL = 0;
+	SR = 0;
+	DSWDP = 0;
+	SW = 1.0;
+	SWT = 1.0;
+	SWB = 1.0;
+	CNUB = 0.0;
+
+}
 
 Node::Node(Node const&rhs){
 	NodeNumber = rhs.NodeNumber;
@@ -311,7 +322,7 @@ double Node::getSR()
 
 double Node::getU()
 {
-	
+	return this->U;
 }
 
 

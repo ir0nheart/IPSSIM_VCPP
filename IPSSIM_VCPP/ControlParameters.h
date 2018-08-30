@@ -44,21 +44,26 @@ class ControlParameters
 {
 public:
 	// try for parsing
-	
+	void printToFile(string fname);
+	void set_bcs(bool val){ setBCS = val; }
+	bool get_bcs() const{ return setBCS; }
 	double * nodeX;
 	double * nodeY;
 	double * nodeZ;
 	double * nodePorosity;
 	int * nodeRegion;
 	double * nodeSOP;
-	double * nodeUBC;
-	double * nodePBC;
+	//double * nodeUBC;
+	//double * nodePBC;
+	vector<double> nodePBC;
+	vector<double> nodeUBC;
 	double * nodeQIN;
 	double * nodeUIN;
 	double * nodeQUIN;
 	double * nodePVEC;
 	double * nodeUVEC;
-	double * nodeVOL;
+	/*double * nodeVOL;
+	double * nodeRHS;*/
 	int IMID, JMID;
 	double GUL, GUR, GPINL, GPINR, GUINR, GUINL;
 	double SWRHON;
@@ -109,6 +114,7 @@ public:
 	void loadInitialConditions();
 	void solveTimeStep();
 	void findObservationElementThread();
+	void freeDataSets();
 	void Source(string key); // READ SOURCE
 	//void addDataSet(string dataSet, string dataSetName);
 	vector<DataSet *> getDataSets();
@@ -122,6 +128,7 @@ public:
 	void writeToNODString(string str);
 	void writeToELEString(string str);
 	void writeToOBSString(string str);
+	void writeToIAString(string str);
 	void popWriteContainer();
 	void setTITLE1(string str);
 	void setTITLE2(string str);
@@ -560,7 +567,11 @@ public:
 	void setITERPARAMS1();
 	void setITERPARAMS2();
 	void setITERPARAMS3();
+	bool getBCSFL(int index);
+	bool getBCSTR(int index);
 private:
+	vector<int>IAVec;
+	vector<int>JAVec;
 	double VXG[8] ;
 	double VYG[8] ;
 	double VZG[8] ;
@@ -619,6 +630,7 @@ private:
 	Node **nodeArray;
 	vector<Element *> elementContainer;
 	vector<Schedule *> listOfSchedules;
+	vector<double> rhss;
 	int numberOfLayers;
 	double TEMP;
 	double PSTAR;
@@ -850,6 +862,7 @@ private:
 	bool isNewRun;
 	bool isNewNod;
 	bool isNewObs;
+	bool isNewIA;
 	double TSTART;
 	double TFINISH;
 	list<pair<double,double>>timeSteps;
@@ -861,8 +874,8 @@ private:
 	int IT, ITRST, ITREL,ITER,IPWORS,IUWORS;
 	double RPM, RUM;
 	int KTPRN;
-	bool * BCSFL;
-	bool * BCSTR;
+	vector<bool> BCSFL;
+	vector<bool> BCSTR;
 	int ML;
 	double DLTPM1, DLTUM1, BDELP1, BDELP, BDELU, BDELU1;
 	Schedule * BCSSchedule = nullptr;
@@ -886,5 +899,7 @@ private:
 	double RP, RU;
 	int IGOI;
 	double ERRP, ERRU, ITRSP, ITRSU;
+	vector<double> nodeVOL;
+	vector<double> nodeRHS;
 };
 #endif
