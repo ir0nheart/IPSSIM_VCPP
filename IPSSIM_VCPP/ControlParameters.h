@@ -43,6 +43,10 @@ class DataSet;
 class ControlParameters
 {
 public:
+
+	void GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution);
+	void BiCGSTAB(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution);
+	void ORTHOMIN(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution);
 	// try for parsing
 	void printToFile(string fname);
 	void set_bcs(bool val){ setBCS = val; }
@@ -63,7 +67,7 @@ public:
 	double * nodePVEC;
 	double * nodeUVEC;
 	/*double * nodeVOL;
-	double * nodeRHS;*/
+	double * node_p_rhs;*/
 	int IMID, JMID;
 	double GUL, GUR, GPINL, GPINR, GUINR, GUINL;
 	double SWRHON;
@@ -121,7 +125,7 @@ public:
 	void parseDataSet_15B();
 	void parseDataSet_8D();
 	void setParameters();
-	double DNRM2(int N, double* X, int INCX);
+	double DNRM2(int N,vector<double>& X, int INCX);
 	const string VERN = "2.2";
 	void exitOnError(string ERRCOD, vector<string>CHERR = vector<string>());
 	void writeToLSTString(string str);
@@ -490,9 +494,9 @@ public:
 	void setOnceOBS(bool val);
 	void setTIME(double val);
 	double getTIME();
-	void solveEquation(int KPU,int KSOLVR, MatrixXd PMAT, double * nodePVEC,double &IERR,double &ITRS,double & ERR);
-	void SOLVEB(int KMT, MatrixXd PMAT, double* nodePVEC);
-	void SOLWRP(int KPU, int KSOLVR,MatrixXd PMAT, double * nodePVEC);
+	void solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,double &IERR, double &ITRS, double & ERR);
+	void SOLVEB(int KMT, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution);
+	void SOLWRP(int KPU, int KSOLVR,MatrixXd& MAT, vector<double>&rhs, vector<double>& solution);
 
 	void setML(int val);
 	int getML();
@@ -630,7 +634,7 @@ private:
 	Node **nodeArray;
 	vector<Element *> elementContainer;
 	vector<Schedule *> listOfSchedules;
-	vector<double> rhss;
+	
 	int numberOfLayers;
 	double TEMP;
 	double PSTAR;
@@ -900,6 +904,11 @@ private:
 	int IGOI;
 	double ERRP, ERRU, ITRSP, ITRSU;
 	vector<double> nodeVOL;
-	vector<double> nodeRHS;
+	vector<double> node_p_rhs;
+	vector<double> node_u_rhs;
+	vector<double> p_solution;
+	vector<double> u_solution;
+	vector<double> p_rhs;
+	vector<double> u_rhs;
 };
 #endif

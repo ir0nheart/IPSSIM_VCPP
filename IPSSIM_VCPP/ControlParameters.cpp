@@ -16,7 +16,6 @@
 #include <Eigen/Sparse>
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/OrderingMethods>
-#include <unsupported/Eigen/IterativeSolvers>
 
 using namespace std;
 using namespace Eigen;
@@ -636,11 +635,14 @@ nodeQUIN = new double[NN + 1]{};
 nodePVEC = new double[NN + 1]{};
 nodeUVEC = new double[NN + 1]{};
 //nodeVOL = new double[NN + 1]{};
-//nodeRHS = new double[NN]{};
+//node_p_rhs = new double[NN]{};
 nodeVOL = vector<double>(NN + 1, 0);
-nodeRHS = vector<double>(NN + 1, 0);
+node_p_rhs = vector<double>(NN + 1, 0);
+node_u_rhs = vector<double>(NN + 1, 0);
 nodePBC = vector<double>(NN +1, 0);
 nodeUBC = vector<double>(NN +1, 0);
+p_solution = vector<double>(NN, 0);
+u_solution = vector<double>(NN, 0);
 nodeContainer.reserve(NN+1);
 
 Timer t;
@@ -5261,7 +5263,7 @@ void ControlParameters::GLOCOL(int el, int ML, double VOLE[8], double BFLOWE[8][
 		ib=elementContainer[el]->getElementNodes()[i] -1;
 		nodeVOL[ib] = nodeVOL[ib] + VOLE[i];
 		//nodePVEC[ib] = nodePVEC[ib] + DFLOWE[i];
-		nodeRHS[ib] = nodeRHS[ib] + DFLOWE[i];
+		node_p_rhs[ib] = node_p_rhs[ib] + DFLOWE[i];
 
 		for (int j = 0; j < N48; j++)
 		{
@@ -5457,8 +5459,8 @@ void ControlParameters::NODAL()
 			DUDT = (1 - ISSFLO / 2)*(nodeContainer[i]->getUM1() - nodeContainer[i]->getUM2()) / DLTUM1;
 			CFLN = CFLN*DUDT - (nodeContainer[i]->getSW()*GCONST*TEMP*nodeContainer[i]->getPorosity()*nodeContainer[i]->getRHO()*(pow(nodeContainer[i]->getSWB(), 2) / term2)*(0.5*-1 * PRODF1*(nodeContainer[i]->getRHO()*nodeContainer[i]->getUITER() / SMWH)))*nodeContainer[i]->getVOL();
 			PMAT(IMID, JMID) = PMAT(IMID, JMID) + AFLN;
-			term4 = nodeRHS[i-1] - CFLN + AFLN * nodeContainer[i]->getPM1() + nodeContainer[i]->getQIN();
-			rhss.push_back(term4);
+			term4 = node_p_rhs[i-1] - CFLN + AFLN * nodeContainer[i]->getPM1() + nodeContainer[i]->getQIN();
+			p_rhs.push_back(term4);
 
 			if ((ML - 1) == 0)
 				continue;
@@ -5467,12 +5469,12 @@ void ControlParameters::NODAL()
 			double EPRS, ATRN, GTRN, GSV, GSLTRN, GSRTRN, ETRN, QUR, QUL;
 
 			EPRS = (1.0 - nodeContainer[i]->getPorosity())*RHOS;
-			ATRN = (1 - ISSTRA)*(nodeContainer[i]->getPorosity()*SWRHON*CW + EPRS * nodeContainer[i]->getCS1())*nodeContainer[i]->getVOL() / DELTU;
-			GTRN = nodeContainer[i]->getPorosity()*SWRHON*PRODF1*nodeContainer[i]->getVOL();
-			GSV = EPRS*PRODS1*nodeContainer[i]->getVOL();
+			ATRN = (1 - ISSTRA)*(nodeContainer[i]->getPorosity()*SWRHON*CW + EPRS * nodeContainer[i]->getCS1())*nodeVOL[i - 1] / DELTU;
+			GTRN = nodeContainer[i]->getPorosity()*SWRHON*PRODF1*nodeVOL[i - 1];
+			GSV = EPRS*PRODS1*nodeVOL[i - 1];
 			GSLTRN = GSV * nodeContainer[i]->getSL();
 			GSRTRN = GSV * nodeContainer[i]->getSR();
-			ETRN = (nodeContainer[i]->getPorosity()*SWRHON*PRODF0 + EPRS*PRODS0)*nodeContainer[i]->getVOL();
+			ETRN = (nodeContainer[i]->getPorosity()*SWRHON*PRODF0 + EPRS*PRODS0)*nodeVOL[i - 1];
 
 			QUR = 0;
 			QUL = 0;
@@ -5599,7 +5601,7 @@ void ControlParameters::BC()
 					  GPINL  = - 1 * nodeContainer[ind]->getGNUP1();
 					  GPINR = nodeContainer[ind]->getGNUP1() * nodePBC[ind];
 					  PMAT(IMID, JMID) = PMAT(IMID, JMID) - GPINL;
-					  rhss[ind-1] = rhss[ind-1] + GPINR;
+					  p_rhs[ind-1] = p_rhs[ind-1] + GPINR;
 					  GUR = 0.0;
 					  GUL = 0.0;
 					  if (nodeContainer[ind]->getQPLITR() > 0)
@@ -6566,7 +6568,7 @@ void ControlParameters::setITERPARAMS3(){
 	}
 }
 
-double ControlParameters::DNRM2(int N, double* X, int INCX)
+double ControlParameters::DNRM2(int N, vector<double>& X, int INCX)
 {	
 	double NORM, SSQ, SCALE;
 	double ABSXI;
@@ -6584,7 +6586,7 @@ double ControlParameters::DNRM2(int N, double* X, int INCX)
 		SCALE = 0.0;
 		SSQ = 1.0;
 
-		for (int it = 1; it <= (1 + (N - 1)*INCX); it += INCX)
+		for (int it = 1; it < (1 + (N - 1)*INCX); it += INCX)
 		{
 			if (X[it] != 0.0)
 			{
@@ -6606,18 +6608,17 @@ double ControlParameters::DNRM2(int N, double* X, int INCX)
 }
 
 
-void ControlParameters::solveEquation(int KPU,int KSOLVR,MatrixXd MAT, double * nodeVEC,double& IERR,double& ITRS,double& ERR){
-	//SUBROUTINE SOLVER(KMT,KPU,KSOLVR,C,R,XITER,B,NNP,IHALFB,MAXNP, MAXBW, IWK, FWK, IA, JA, IERR, ITRS, ERR)
+void ControlParameters::solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,double& IERR, double& ITRS, double& ERR){
 	char* KPUTEXT[2] = { "P", "U" };
-	double RHSNRM = DNRM2(NNVEC, nodeVEC, 1);
+	double RHSNRM = DNRM2(NNVEC, rhs, 1);
 	if (RHSNRM == 0.0)
 	{
 		IERR = 0;
 		ITRS = 0;
 		ERR = 0;
-		for (int i = 1; i <= NN; i++)
+		for (int i = 0; i < NN; i++)
 		{
-			nodeVEC[i] = 0.0;
+			solution[i] = 0.0;
 		}
 
 		cout << "       " << KPUTEXT[KPU] << "-solution (" << KPUTEXT[KPU] << "= 0) inferred from matrix equation A*" << KPUTEXT[KPU] << "=0; solver not called." << endl;
@@ -6627,24 +6628,25 @@ void ControlParameters::solveEquation(int KPU,int KSOLVR,MatrixXd MAT, double * 
 
 	if (KSOLVR == 0)
 	{
-		SOLVEB(KMT, MAT, nodeVEC);
+		SOLVEB(KMT, MAT, rhs,solution);
 		IERR = 0;
 		ITRS = 0;
 		ERR = 0;
 	}
 	else
 	{
-		SOLWRP(KPU, KSOLVR, MAT, nodeVEC);
+		SOLWRP(KPU, KSOLVR, MAT, rhs,solution);
 	}
 
 }
 
-void ControlParameters::SOLVEB(int KMT, MatrixXd MAT, double * nodeVEC)
+
+void ControlParameters::SOLVEB(int KMT, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution)
 {
 	
 }
 
-void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd MAT, double * nodeVEC)
+void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT,vector<double>&rhs , vector<double>& solution)
 {
 	//SOLWRP(KPU, KSOLVR, A, R, XITER, B, NNP,IWK, FWK, IA, JA, IERR, ITRS, ERR)
 	//SOLWRP(KPU, KSOLVR, C, R, XITER, B, NNP, IWK, FWK, IA, JA, IERR, ITRS, ERR)
@@ -6681,10 +6683,8 @@ void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd MAT, double * nodeV
 	}
 	else if (KSOLVR == 2)
 	{
-		//
-		cout << " -- GMRES Method -- " << endl;
-		std::vector<map<unsigned int, double>> stl_A(NN,map<unsigned int,double>());
 		
+	/*	std::vector<map<unsigned int, double>> stl_A(NN,map<unsigned int,double>());		
 		vector<int> jJA;
 		jJA.reserve(PMAT.size());
 		int dif = 0;
@@ -6706,48 +6706,28 @@ void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd MAT, double * nodeV
 				stl_A[jJA[jk]].emplace(IAVec[jk], PMAT(jk, 0));
 			}
 		
-		/*vector<T> triplets;
-		for (int i = 0; i < IAVec.size(); i++)
-		{
-			triplets.push_back(T(jJA[i], IAVec[i], PMAT(i, 0)));
-			if (i < 30)
-				cout << "PMAT " << i << " " << PMAT(i, 0) << endl;
-		}*/
+
 		viennacl::vector<double> vcl_rhs=viennacl::scalar_vector<double>(NN,0);
 		for (int i = 0; i < NN; i++)
 		{
-			vcl_rhs[i]=rhss[i];		
+			vcl_rhs[i]=p_rhs[i];		
 		}
 	
 
-		
-	/*	Eigen::SparseMatrix<double> eigen_Sparsematrix(NN, NN);
-		eigen_Sparsematrix.setFromTriplets(triplets.begin(), triplets.end());
-*/
 		viennacl::compressed_matrix<double> A;
 		viennacl::copy(stl_A, A);
 
 		viennacl::linalg::ilu0_precond<viennacl::compressed_matrix<double>> ilu0(A, viennacl::linalg::ilu0_tag());
 		viennacl::linalg::gmres_tag my_gmres_tag(1e-13, 2000, 30);
 		viennacl::linalg::gmres_solver<viennacl::vector<double> > my_gmres_solver(my_gmres_tag);
-
-		std::clock_t start;
-		//viennacl::vector<double> vcl_rhs =viennacl::scalar_vector<double>(NN,0);
 		viennacl::vector<double> init_guess = viennacl::scalar_vector<double>(NN, double(0.9));
 		init_guess[0] = 0;
 		monitor_user_data<viennacl::compressed_matrix<double>, viennacl::vector<double> > my_monitor_data(A, vcl_rhs, init_guess);
 		my_gmres_solver.set_monitor(my_custom_monitor<viennacl::vector<double>, double, viennacl::compressed_matrix<double> >, &my_monitor_data);
 		my_gmres_solver.set_initial_guess(init_guess);
-		start = std::clock();
 		viennacl::vector<double> vcl_results = my_gmres_solver(A, vcl_rhs, ilu0);
-		std::cout << (std::clock() - start) / (double)CLOCKS_PER_SEC << " seconds.." << std::endl;
-		for (int i = 0; i < 30; i++)
-		{
-			cout << vcl_results[i] << endl;
-		}
-        cout << " done " << endl;
-		//viennacl::copy(stl_A, A);
-
+*/
+		GMRES(MAT,rhs,solution);
 	}
 	else
 	{
@@ -6757,25 +6737,16 @@ void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd MAT, double * nodeV
 }
 void ControlParameters::solveTimeStep()
 {
-	//string filename = InputFiles::Instance()->getInputDirectory() + "\\" + "pmatOut.txt";
-	//ofstream outPmat;
 
-	//outPmat.open(filename, std::ios_base::out);
-	//outPmat << " PMAT will be below " << endl;
-	//for (int i = 0; i < PMAT.size(); i++)
+	//string filename = InputFiles::Instance()->getInputDirectory() + "\\" + "rhs.txt";
+	//ofstream rhsStream;
+
+	//rhsStream.open(filename, std::ios_base::out);
+	//rhsStream << p_rhs.size() << endl;
+	//for (int i = 0; i < p_rhs.size(); i++)
 	//{
-	//	outPmat << PMAT(i, 0) << endl;
+	//	rhsStream << p_rhs[i] << endl;
 	//}
-
-	string filename = InputFiles::Instance()->getInputDirectory() + "\\" + "rhs.txt";
-	ofstream rhsStream;
-
-	rhsStream.open(filename, std::ios_base::out);
-	rhsStream << rhss.size() << endl;
-	for (int i = 0; i < rhss.size(); i++)
-	{
-		rhsStream << rhss[i] << endl;
-	}
 	IHALFB = NBHALF - 1;
 	IERRP = 0;
 	IERRU = 0;
@@ -6786,14 +6757,7 @@ void ControlParameters::solveTimeStep()
 		KPU = 1;
 		KSOLVR = KSOLVP;
 		//  SOLVER(KMT,KPU,KSOLVR,PMAT,PVEC,PITER,B,NN,IHALFB,NELT,NCBI,IWK, FWK, IA, JA, IERRP, ITRSP, ERRP)
-
-
-
-
-
-
-
-		solveEquation(KPU,KSOLVR,PMAT,nodePVEC,IERRP,ITRSP,ERRP);
+		solveEquation(KPU,KSOLVR,PMAT,p_rhs,p_solution,IERRP,ITRSP,ERRP);
 		// P solution is now in PVEC
 		onceP = true;
 
@@ -6801,7 +6765,7 @@ void ControlParameters::solveTimeStep()
 		{
 			for (int i = 1; i <= NN; i++)
 			{
-				nodeContainer[i]->setPM1(nodePVEC[i]);
+				nodeContainer[i]->setPM1(p_solution[i-1]);
 			}
 		}
 	}
@@ -6811,7 +6775,7 @@ void ControlParameters::solveTimeStep()
 		KMT = 0;
 		KPU = 2;
 		KSOLVR = KSOLVU;
-		solveEquation(KPU,KSOLVR, UMAT, nodeUVEC, IERRU, ITRSU, ERRU);
+		solveEquation(KPU,KSOLVR, UMAT, u_rhs,u_solution, IERRU, ITRSU, ERRU);
 		// U solution is now in UVEC
 	}
 
@@ -6943,9 +6907,67 @@ void ControlParameters::printToFile(string fname)
 	ofstream rhsStream;
 
 	rhsStream.open(filename, std::ios_base::out);
-	rhsStream << rhss.size() << endl;
-	for (int i = 0; i < rhss.size(); i++)
+	rhsStream << p_rhs.size() << endl;
+	for (int i = 0; i < p_rhs.size(); i++)
 	{
-		rhsStream << rhss[i] << endl;
+		rhsStream << p_rhs[i] << endl;
 	}
+}
+
+void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution)
+{
+	std::vector<map<unsigned int, double>> stl_A(NN, map<unsigned int, double>());
+	vector<int> jJA;
+	jJA.reserve(PMAT.size());
+	int dif = 0;
+	int ctr = 0;
+	for (int j = 1; j < JAVec.size(); j++)
+	{
+		dif = JAVec[j] - JAVec[j - 1];
+
+		for (int i = 0; i < dif; i++)
+		{
+			jJA.push_back(ctr);
+		}
+		ctr++;
+	}
+	cout << "Max Element in jJA " << *max_element(jJA.begin(), jJA.end()) << endl;
+
+	for (int jk = 0; jk < IAVec.size(); jk++)
+	{
+		stl_A[jJA[jk]].emplace(IAVec[jk], PMAT(jk, 0));
+	}
+
+
+	viennacl::vector<double> vcl_rhs = viennacl::scalar_vector<double>(NN, 0);
+	for (int i = 0; i < NN; i++)
+	{
+		vcl_rhs[i] = p_rhs[i];
+	}
+
+
+	viennacl::compressed_matrix<double> A;
+	viennacl::copy(stl_A, A);
+
+	viennacl::linalg::ilu0_precond<viennacl::compressed_matrix<double>> ilu0(A, viennacl::linalg::ilu0_tag());
+	viennacl::linalg::gmres_tag my_gmres_tag(1e-13, 2000, 30);
+	viennacl::linalg::gmres_solver<viennacl::vector<double> > my_gmres_solver(my_gmres_tag);
+	viennacl::vector<double> init_guess = viennacl::scalar_vector<double>(NN, double(0.9));
+	init_guess[0] = 0;
+	monitor_user_data<viennacl::compressed_matrix<double>, viennacl::vector<double> > my_monitor_data(A, vcl_rhs, init_guess);
+	my_gmres_solver.set_monitor(my_custom_monitor<viennacl::vector<double>, double, viennacl::compressed_matrix<double> >, &my_monitor_data);
+	my_gmres_solver.set_initial_guess(init_guess);
+	viennacl::vector<double> vcl_results = my_gmres_solver(A, vcl_rhs, ilu0);
+	copy(vcl_results, solution);
+
+}
+
+void ControlParameters::BiCGSTAB(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution)
+{
+	
+}
+
+void ControlParameters::ORTHOMIN(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution)
+{
+	
 }
