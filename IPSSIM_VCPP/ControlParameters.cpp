@@ -643,6 +643,8 @@ nodePBC = vector<double>(NN +1, 0);
 nodeUBC = vector<double>(NN +1, 0);
 p_solution = vector<double>(NN, 0);
 u_solution = vector<double>(NN, 0);
+p_rhs.reserve(NN);
+u_rhs.reserve(NN);
 nodeContainer.reserve(NN+1);
 
 Timer t;
@@ -5716,7 +5718,8 @@ void ControlParameters::BC()
 
 		
 	}
-		
+	for (int i = 1; i <= NN; i++)
+		u_rhs.push_back(nodeUVEC[i]);
 }
 void ControlParameters::UNSAT(Node * node)
 { // Args  SW,DSWDP,RELK,PRES,KREG
@@ -6061,8 +6064,7 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	double THAAX, THBBY, THCCZ;
 	AA = BB = CC = 0;
 	double CJ[3][3] = {};
-	Matrix3d CJm(3,3);
-	Matrix3d iCJm(3,3);
+	double CIJ[3][3] = {};
 	double VV;
 	double DET;
 	double SWG, RELKG;
@@ -6105,17 +6107,16 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 		CJ[2][2] = CJ[2][2] + DFDZL[i] * nodeContainer[nodeNum]->getZCoord();
 	}
 	
-	for (int i = 0; i < 3; i++){
-		for (int j = 0; j < 3; j++){
-			CJm(i,j) = CJ[i][j];
-		}
-	}
-	DET = CJm.determinant();
+	DET = CJ[0][0] * (CJ[1][1] * CJ[2][2] - CJ[2][1] * CJ[1][2]) -
+		CJ[1][0] * (CJ[0][1] * CJ[2][2] - CJ[2][1] * CJ[0][2]) +
+		CJ[2][0] * (CJ[0][1] * CJ[1][2] - CJ[1][1] * CJ[0][2]);
 	elementContainer[el]->putIntoDET(node,DET);
+	double ODET = 1.0 / DET;
+
 	double GXSI, GETA, GZET;
-	GXSI = CJm(0, 0)*GRAVX + CJm(0, 1)*GRAVY + CJm(0, 2)*GRAVZ;
-	GETA = CJm(1, 0)*GRAVX + CJm(1, 1)*GRAVY + CJm(1, 2)*GRAVZ;
-	GZET = CJm(2, 0)*GRAVX + CJm(2, 1)*GRAVY + CJm(2, 2)*GRAVZ;
+	GXSI = CJ[0][0] * GRAVX + CJ[0][1] * GRAVY + CJ[0][2] * GRAVZ;
+	GETA = CJ[1][0] * GRAVX + CJ[1][1] * GRAVY + CJ[1][2] * GRAVZ;
+	GZET = CJ[2][0] * GRAVX + CJ[2][1] * GRAVY + CJ[2][2] * GRAVZ;
 	elementContainer[el]->putIntoGXSI(node, GXSI);
 	elementContainer[el]->putIntoGETA(node, GETA);
 	elementContainer[el]->putIntoGZET(node, GZET);
@@ -6123,17 +6124,21 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	if (ICALL == 0)
 		return;
 
-	iCJm = CJm.inverse();
+	CIJ[0][0] = +ODET*(CJ[1][1] * CJ[2][2] - CJ[2][1] * CJ[1][2]);
+	CIJ[0][1] = -ODET*(CJ[0][1] * CJ[2][2] - CJ[2][1] * CJ[0][2]);
+	CIJ[0][2] = +ODET*(CJ[0][1] * CJ[1][2] - CJ[1][1] * CJ[0][2]);
+	CIJ[1][0] = -ODET*(CJ[1][0] * CJ[2][2] - CJ[2][0] * CJ[1][2]);
+	CIJ[1][1] = +ODET*(CJ[0][0] * CJ[2][2] - CJ[2][0] * CJ[0][2]);
+	CIJ[1][2] = -ODET*(CJ[0][0] * CJ[1][2] - CJ[1][0] * CJ[0][2]);
+	CIJ[2][0] = +ODET*(CJ[1][0] * CJ[2][1] - CJ[2][0] * CJ[1][1]);
+	CIJ[2][1] = -ODET*(CJ[0][0] * CJ[2][1] - CJ[2][0] * CJ[0][1]);
+	CIJ[2][2] = +ODET*(CJ[0][0] * CJ[1][1] - CJ[1][0] * CJ[0][1]);
 	//Calculate3 determinates in Global coordinates
-	double iCJM[3][3];
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++)
-			iCJM[i][j] = iCJm(i, j);
-
+	
 	for (int i = 0; i < 8; i++){
-		DFDXG[node][i] = iCJm(0, 0)*DFDXL[i] + iCJm(0, 1)*DFDYL[i] + iCJm(0, 2)*DFDZL[i];
-		DFDYG[node][i] = iCJm(1, 0)*DFDXL[i] + iCJm(1, 1)*DFDYL[i] + iCJm(1, 2)*DFDZL[i];
-		DFDZG[node][i] = iCJm(2, 0)*DFDXL[i] + iCJm(2, 1)*DFDYL[i] + iCJm(2, 2)*DFDZL[i];
+		DFDXG[node][i] = CIJ[0][0] * DFDXL[i] + CIJ[0][1] * DFDYL[i] + CIJ[0][2] * DFDZL[i];
+		DFDYG[node][i] = CIJ[1][0] * DFDXL[i] + CIJ[1][1] * DFDYL[i] + CIJ[1][2] * DFDZL[i];
+		DFDZG[node][i] = CIJ[2][0] * DFDXL[i] + CIJ[2][1] * DFDYL[i] + CIJ[2][2] * DFDZL[i];
 	}
 
 	// CALCULATE CONSISTENT COMPONENTS OF (RHO*GRAV) TERM IN LOCAL COORDINATES
@@ -6152,12 +6157,12 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 
 	// TRANSFORM CONSISTENT COMPONENTS OF (RHO*GRAV) TERM TO GLOBAL Coordinates
 
-	RGXG[node] = iCJm(0,0)*RGXL + iCJm(0,1)*RGYL + iCJm(0,2)*RGZL;
-	RGYG[node] = iCJm(1, 0)*RGXL + iCJm(1, 1)*RGYL + iCJm(1, 2)*RGZL;
-	RGZG[node] = iCJm(2, 0)*RGXL + iCJm(2, 1)*RGYL + iCJm(2, 2)*RGZL;
-	RGXGM1 = iCJm(0,0)*RGXLM1 + iCJm(0,1)*RGYLM1 + iCJm(0,2)*RGZLM1;
-	RGYGM1 = iCJm(1,0)*RGXLM1 + iCJm(1,1)*RGYLM1 + iCJm(1,2)*RGZLM1;
-	RGZGM1 = iCJm(2,0)*RGXLM1 + iCJm(2,1)*RGYLM1 + iCJm(2,2)*RGZLM1;
+	RGXG[node] = CIJ[0][0] * RGXL + CIJ[0][1] * RGYL + CIJ[0][2] * RGZL;
+	RGYG[node] = CIJ[1][0] * RGXL + CIJ[1][1] * RGYL + CIJ[1][2] * RGZL;
+	RGZG[node] = CIJ[2][0] * RGXL + CIJ[2][1] * RGYL + CIJ[2][2] * RGZL;
+	RGXGM1 = CIJ[0][0] * RGXLM1 + CIJ[0][1] * RGYLM1 + CIJ[0][2] * RGZLM1;
+	RGYGM1 = CIJ[1][0] * RGXLM1 + CIJ[1][1] * RGYLM1 + CIJ[1][2] * RGZLM1;
+	RGZGM1 = CIJ[2][0] * RGXLM1 + CIJ[2][1] * RGYLM1 + CIJ[2][2] * RGZLM1;
 	PORGT = 0;
 	for (int i = 0; i < 8; i++){
 		int nodeNum = elementNodes[el][i];
@@ -6226,9 +6231,9 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 
 ASYM:
 	//CALCULATE FLUID VELOCITIES WITH RESPECT TO LOCAL COORDINATES,VXL, VYL, VZL, AND VLMAG, AT THIS LOCATION, (XLOC, YLOC, ZLOC).
-	VXL = iCJm(0, 0)*VXG[node] + iCJm(0, 1)*VYG[node] + iCJm(0, 2)*VZG[node];
-	VYL = iCJm(1, 0)*VXG[node] + iCJm(1, 1)*VYG[node] + iCJm(1, 2)*VZG[node];
-	VZL = iCJm(2, 0)*VXG[node] + iCJm(2, 1)*VYG[node] + iCJm(2, 2)*VZG[node];
+	VXL = CIJ[0][0] * VXG[node] + CIJ[0][1] * VYG[node] + CIJ[0][2] * VZG[node];
+	VYL = CIJ[1][0] * VXG[node] + CIJ[1][1] * VYG[node] + CIJ[1][2] * VZG[node];
+	VZL = CIJ[2][0] * VXG[node] + CIJ[2][1] * VYG[node] + CIJ[2][2] * VZG[node];
 	VLMAG = sqrt(VXL*VXL + VYL*VYL + VZL*VZL);
 
 
@@ -6269,9 +6274,9 @@ ASYM:
 	}
 	//CALCULATE DERIVATIVES WITH RESPECT TO GLOBAL COORDINATES
 	for (int i = 0; i < 8; i++){
-		DWDXG[node][i] = iCJm(0, 0)*DWDXL[i] + iCJm(0, 1)*DWDYL[i] + iCJm(0, 2)*DWDZL[i];
-		DWDYG[node][i] = iCJm(1, 0)*DWDXL[i] + iCJm(1, 1)*DWDYL[i] + iCJm(1, 2)*DWDZL[i];
-		DWDZG[node][i] = iCJm(2, 0)*DWDXL[i] + iCJm(2, 1)*DWDYL[i] + iCJm(2, 2)*DWDZL[i];
+		DWDXG[node][i] = CIJ[0][0] * DWDXL[i] + CIJ[0][1] * DWDYL[i] + CIJ[0][2] * DWDZL[i];
+		DWDYG[node][i] = CIJ[1][0] * DWDXL[i] + CIJ[1][1] * DWDYL[i] + CIJ[1][2] * DWDZL[i];
+		DWDZG[node][i] = CIJ[2][0] * DWDXL[i] + CIJ[2][1] * DWDYL[i] + CIJ[2][2] * DWDZL[i];
 	}
 	
 }
@@ -6369,6 +6374,8 @@ void ControlParameters::createSolverMatrix(){
 
 		PMAT = MatrixXd::Zero(NELT, 1);
 		UMAT = MatrixXd::Zero(NELT, 1);
+		stl_A = vector<map<unsigned int, double>>(NN, map<unsigned int, double>());
+		vcl_rhs = viennacl::scalar_vector<double>(NN, 0);
 		PPVEC = VectorXd::Zero(NNVEC);
 		UUVEC = VectorXd::Zero(NNVEC);
 		FWK = VectorXd::Zero(NWF);
@@ -6515,7 +6522,19 @@ void ControlParameters::alpayPTR(){
 		ctr = ctr + nodeNeighbors[i + 1].size()+1;
 	}
 	JAVec.push_back(NELT);
+	jJA.reserve(NELT);
+	int dif = 0;
+	ctr = 0;
+	for (int j = 1; j < JAVec.size(); j++)
+	{
+		dif = JAVec[j] - JAVec[j - 1];
 
+		for (int i = 0; i < dif; i++)
+		{
+			jJA.push_back(ctr);
+		}
+		ctr++;
+	}
 }
 
 void ControlParameters::TENSYM(double DL, double DT1, double DT2, double VNX, double UNX, double WNX,double VNY, double UNY, double WNY, double VNZ, double UNZ, double WNZ,
@@ -6608,7 +6627,7 @@ double ControlParameters::DNRM2(int N, vector<double>& X, int INCX)
 }
 
 
-void ControlParameters::solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,double& IERR, double& ITRS, double& ERR){
+void ControlParameters::solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,double& IERR, int& ITRS, double& ERR){
 	char* KPUTEXT[2] = { "P", "U" };
 	double RHSNRM = DNRM2(NNVEC, rhs, 1);
 	if (RHSNRM == 0.0)
@@ -6635,7 +6654,7 @@ void ControlParameters::solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector
 	}
 	else
 	{
-		SOLWRP(KPU, KSOLVR, MAT, rhs,solution);
+		SOLWRP(KPU, KSOLVR, MAT, rhs,solution,ITRS,ERR);
 	}
 
 }
@@ -6646,7 +6665,7 @@ void ControlParameters::SOLVEB(int KMT, MatrixXd& MAT, vector<double>&rhs, vecto
 	
 }
 
-void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT,vector<double>&rhs , vector<double>& solution)
+void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT,vector<double>&rhs , vector<double>& solution, int& ITRS, double& ERR)
 {
 	//SOLWRP(KPU, KSOLVR, A, R, XITER, B, NNP,IWK, FWK, IA, JA, IERR, ITRS, ERR)
 	//SOLWRP(KPU, KSOLVR, C, R, XITER, B, NNP, IWK, FWK, IA, JA, IERR, ITRS, ERR)
@@ -6658,9 +6677,9 @@ void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT,vector<double>
 		//DOING SO MIGHT INTERFERE WITH SUBSEQUENT CALCULATIONS.
 	
 	//double * B = new double[NN + 1]{};
+	char* KPUTEXT[2] = { "P", "U" };
 
-
-	if (KPU == 1)
+	if (KPU == 0)
 	{
 		ISYM = 0;
 		ITRMX = max(ITRMXP, 1);
@@ -6679,59 +6698,24 @@ void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT,vector<double>
 
 	if (KSOLVR == 1)
 	{
-		DSICCG();
+		BiCGSTAB(MAT, rhs, solution, ITRS, ERR);
 	}
 	else if (KSOLVR == 2)
 	{
-		
-	/*	std::vector<map<unsigned int, double>> stl_A(NN,map<unsigned int,double>());		
-		vector<int> jJA;
-		jJA.reserve(PMAT.size());
-		int dif = 0;
-		int ctr = 0;
-		for (int j = 1; j < JAVec.size(); j++)
-		{
-			dif = JAVec[j] - JAVec[j - 1];
-		
-			for (int i = 0; i < dif; i++)
-			{
-				jJA.push_back(ctr);
-			}
-			ctr++;
-		}
-		cout << "Max Element in jJA " << *max_element(jJA.begin(), jJA.end()) << endl;
-		
-			for (int jk = 0; jk < IAVec.size(); jk++)
-			{
-				stl_A[jJA[jk]].emplace(IAVec[jk], PMAT(jk, 0));
-			}
-		
-
-		viennacl::vector<double> vcl_rhs=viennacl::scalar_vector<double>(NN,0);
-		for (int i = 0; i < NN; i++)
-		{
-			vcl_rhs[i]=p_rhs[i];		
-		}
-	
-
-		viennacl::compressed_matrix<double> A;
-		viennacl::copy(stl_A, A);
-
-		viennacl::linalg::ilu0_precond<viennacl::compressed_matrix<double>> ilu0(A, viennacl::linalg::ilu0_tag());
-		viennacl::linalg::gmres_tag my_gmres_tag(1e-13, 2000, 30);
-		viennacl::linalg::gmres_solver<viennacl::vector<double> > my_gmres_solver(my_gmres_tag);
-		viennacl::vector<double> init_guess = viennacl::scalar_vector<double>(NN, double(0.9));
-		init_guess[0] = 0;
-		monitor_user_data<viennacl::compressed_matrix<double>, viennacl::vector<double> > my_monitor_data(A, vcl_rhs, init_guess);
-		my_gmres_solver.set_monitor(my_custom_monitor<viennacl::vector<double>, double, viennacl::compressed_matrix<double> >, &my_monitor_data);
-		my_gmres_solver.set_initial_guess(init_guess);
-		viennacl::vector<double> vcl_results = my_gmres_solver(A, vcl_rhs, ilu0);
-*/
-		GMRES(MAT,rhs,solution);
+		GMRES(MAT,rhs,solution,ITRS,ERR);
 	}
 	else
 	{
-		DSLUOM();
+		ORTHOMIN(MAT, rhs, solution, ITRS, ERR);
+	}
+
+	if (IERR == 0)
+	{
+		cout << KPUTEXT[KPU] << "-solution converged in " << ITRS << " solver iterations (Error ~ " << ERR << ")" << endl;
+	}
+	else
+	{
+		cout << KPUTEXT[KPU] << "-solution FAILED after " << ITRS << " solver iterations (Error ~ " << ERR << ")" << endl;
 	}
 
 }
@@ -6754,11 +6738,13 @@ void ControlParameters::solveTimeStep()
 	if ((ML - 1) <= 0)
 	{
 		KMT = 0;
-		KPU = 1;
+		KPU = 0;
 		KSOLVR = KSOLVP;
 		//  SOLVER(KMT,KPU,KSOLVR,PMAT,PVEC,PITER,B,NN,IHALFB,NELT,NCBI,IWK, FWK, IA, JA, IERRP, ITRSP, ERRP)
 		solveEquation(KPU,KSOLVR,PMAT,p_rhs,p_solution,IERRP,ITRSP,ERRP);
 		// P solution is now in PVEC
+		for (int i = 1; i <= NN; i++)
+			nodeContainer[i]->setPVEC(p_solution[i - 1]);
 		onceP = true;
 
 		if (ISSFLO != 0)
@@ -6773,9 +6759,11 @@ void ControlParameters::solveTimeStep()
 	if ((ML - 1) != 0)
 	{
 		KMT = 0;
-		KPU = 2;
+		KPU = 1;
 		KSOLVR = KSOLVU;
 		solveEquation(KPU,KSOLVR, UMAT, u_rhs,u_solution, IERRU, ITRSU, ERRU);
+		for (int i = 1; i <= NN; i++)
+			nodeContainer[i]->setUVEC(u_solution[i - 1]);
 		// U solution is now in UVEC
 	}
 
@@ -6861,27 +6849,38 @@ void ControlParameters::solveTimeStep()
 		_snprintf(buff, sizeof(buff), "       Maximum changes in P, U : %1.8e , %1.8e", RPM, RUM);
 		cout << buff << endl;
 		// write to K00;
+		}
 
-		
+	if (ISTOP != -1 && IT == ITMAX)
+		ISTOP = 1;
 
+	PRNALL = ((ISTOP != 0) || IERR != 0);
+	PRN0 = ((ITREL == 0) && (ISSFLO != 0) && (ISSTRA != 1));
+	PRNDEF = (PRNALL || PRN0);
+	PRNK3 = (PRNDEF || (IT % NPRINT == 0) || (ITREL == 1 && NPRINT > 0));
+
+	if (PRNK3)
+	{
+		if (KTYPE[0] == 3)
+		{
+			OUTLST3(ML, ISTOP, IGOI, IERRP, ITRSP, ERRP, IERRU, ITRSU, ERRU);
+		}
+		else
+		{
+			
+		}
 	}
 
+	if (KBUDG == 1)
+	{
+		// Calculate BUDGET
+	}
+
+	PRNK5 = (PRNDEF || ((IT != 0) && (IT%NCOLPR == 0)) || ((ITREL == 1 && NCOLPR > 0)));
 
 }
 
 
-void ControlParameters::DSICCG()
-{
-	
-}
-void ControlParameters::DSLUGM()
-{
-
-}
-void ControlParameters::DSLUOM()
-{
-
-}
 
 void ControlParameters::freeDataSets()
 {
@@ -6914,60 +6913,47 @@ void ControlParameters::printToFile(string fname)
 	}
 }
 
-void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution)
+void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR)
 {
-	std::vector<map<unsigned int, double>> stl_A(NN, map<unsigned int, double>());
-	vector<int> jJA;
-	jJA.reserve(PMAT.size());
-	int dif = 0;
-	int ctr = 0;
-	for (int j = 1; j < JAVec.size(); j++)
-	{
-		dif = JAVec[j] - JAVec[j - 1];
-
-		for (int i = 0; i < dif; i++)
-		{
-			jJA.push_back(ctr);
-		}
-		ctr++;
-	}
-	cout << "Max Element in jJA " << *max_element(jJA.begin(), jJA.end()) << endl;
+	//std::vector<map<unsigned int, double>> stl_A(NN, map<unsigned int, double>());
+	//vector<int> jJA;
+	//cout << "Max Element in jJA " << *max_element(jJA.begin(), jJA.end()) << endl;
 
 	for (int jk = 0; jk < IAVec.size(); jk++)
 	{
 		stl_A[jJA[jk]].emplace(IAVec[jk], PMAT(jk, 0));
 	}
 
-
-	viennacl::vector<double> vcl_rhs = viennacl::scalar_vector<double>(NN, 0);
-	for (int i = 0; i < NN; i++)
-	{
-		vcl_rhs[i] = p_rhs[i];
-	}
-
+	copy(rhs.begin(), rhs.end(), vcl_rhs.begin());
+	//viennacl::vector<double> vcl_rhs = viennacl::scalar_vector<double>(NN, 0);
+	//for (int i = 0; i < NN; i++)
+	//{
+	//	vcl_rhs[i] = p_rhs[i];
+	//}
 
 	viennacl::compressed_matrix<double> A;
 	viennacl::copy(stl_A, A);
-
 	viennacl::linalg::ilu0_precond<viennacl::compressed_matrix<double>> ilu0(A, viennacl::linalg::ilu0_tag());
 	viennacl::linalg::gmres_tag my_gmres_tag(1e-13, 2000, 30);
 	viennacl::linalg::gmres_solver<viennacl::vector<double> > my_gmres_solver(my_gmres_tag);
-	viennacl::vector<double> init_guess = viennacl::scalar_vector<double>(NN, double(0.9));
+	init_guess = viennacl::scalar_vector<double>(NN, double(0.9));
 	init_guess[0] = 0;
 	monitor_user_data<viennacl::compressed_matrix<double>, viennacl::vector<double> > my_monitor_data(A, vcl_rhs, init_guess);
 	my_gmres_solver.set_monitor(my_custom_monitor<viennacl::vector<double>, double, viennacl::compressed_matrix<double> >, &my_monitor_data);
 	my_gmres_solver.set_initial_guess(init_guess);
-	viennacl::vector<double> vcl_results = my_gmres_solver(A, vcl_rhs, ilu0);
+	vcl_results = my_gmres_solver(A, vcl_rhs, ilu0);
 	copy(vcl_results, solution);
-
+	ITRS = my_gmres_solver.tag().iters();
+	ERR = my_gmres_solver.tag().error();
+	
 }
 
-void ControlParameters::BiCGSTAB(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution)
+void ControlParameters::BiCGSTAB(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR)
 {
 	
 }
 
-void ControlParameters::ORTHOMIN(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution)
+void ControlParameters::ORTHOMIN(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR)
 {
 	
 }

@@ -35,6 +35,7 @@
 #include <map>
 #include <iostream>
 #include <Eigen\Dense>
+#include <viennacl/vector.hpp>
 using namespace std;
 using namespace Eigen;
 #pragma once
@@ -44,9 +45,9 @@ class ControlParameters
 {
 public:
 
-	void GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution);
-	void BiCGSTAB(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution);
-	void ORTHOMIN(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution);
+	void GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution,int& ITRS,double& ERR);
+	void BiCGSTAB(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR);
+	void ORTHOMIN(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR);
 	// try for parsing
 	void printToFile(string fname);
 	void set_bcs(bool val){ setBCS = val; }
@@ -494,9 +495,9 @@ public:
 	void setOnceOBS(bool val);
 	void setTIME(double val);
 	double getTIME();
-	void solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,double &IERR, double &ITRS, double & ERR);
+	void solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,double &IERR, int &ITRS, double & ERR);
 	void SOLVEB(int KMT, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution);
-	void SOLWRP(int KPU, int KSOLVR,MatrixXd& MAT, vector<double>&rhs, vector<double>& solution);
+	void SOLWRP(int KPU, int KSOLVR,MatrixXd& MAT, vector<double>&rhs, vector<double>& solution, int& ITRS,double &ERR);
 
 	void setML(int val);
 	int getML();
@@ -573,9 +574,112 @@ public:
 	void setITERPARAMS3();
 	bool getBCSFL(int index);
 	bool getBCSTR(int index);
+	void DISPR3(int i, int el, double VX, double VY, double VZ, double VMAG, double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG, double& DZXG, double& DZYG, double& DZZG);
+	void ROTATE(vector<vector<double>> rotMat, double v1, double v2, double v3, double& vr1, double& vr2, double& vr3);
+	void TENSYM(double DL, double DT1, double DT2, double VNX, double UNX, double WNX, double VNY, double UNY, double WNY, double VNZ, double UNZ, double WNZ,
+		double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG, double&DZXG, double& DZYG, double& DZZG);
 private:
-	vector<int>IAVec;
-	vector<int>JAVec;
+
+	static ControlParameters* m_cInstance;
+	ControlParameters();
+	ControlParameters(ControlParameters const&){};
+	ControlParameters& operator = (ControlParameters const&){};
+	virtual ~ControlParameters();
+
+	bool isNewRun;
+	bool isNewNod;
+	bool isNewObs;
+	bool isNewIA;
+	bool PRNALL;
+	bool PRN0;
+	bool PRNDEF;
+	bool PRNK3;
+	bool PRNK5;
+	bool onceNOD = false;
+	bool onceOBS = false;
+	bool onceP = false;
+	bool onceBCS = false;
+	double TOL;
+
+	double DELTLC, RELCHG, TELAPS;
+	double DURN, TOUT;
+	double TMAX, TEMAX, TSEC, TSECP0, TSECU0, TSECM1, TMIN, THOUR, TMONTH, TDAY, TWEEK, TYEAR, DELT, DELTM1, DELTU, DELTP;
+	double SCALX, SCALY, SCALZ, PORFAC;
+	double PMAXFA, PMIDFA, PMINFA, ANG1FA, ANG2FA, ANG3FA, ALMAXF, ALMIDF, ALMINF, ATMXF, ATMDF, ATMNF, ANGFAC;
+	double waterTable;
+	double TEMP;
+	double PSTAR;
+	double GCONST;
+	double SMWH;
+	double GRAVX; 
+	double GRAVY; 
+	double GRAVZ; 
+	double COMPFL = 0; 
+	double COMPMA = 0; 
+	double VISC0 = 0; 
+	double RHOW0 = 0; 
+	double DRWDU = 0; 
+	double URHOW0 = 0; 
+	double SIGMAW;
+	double SIGMAS;
+	double CW = 0;
+	double CS = 0;
+	double RHOS = 0;
+
+	double PRODS0 = 0; // for energy transport : zero-order rate of energy production in the immobile phase 
+	double CHI1 = 0;
+	double CHI2 = 0;
+
+	double PRODF1 = 0; // for solute transport : rate of first-order production of adsorbate mass in the fluid mass ( equals zero for energy transport)
+	double PRODS1 = 0; // for solute transport : rate of first-order production of solute mass in the immobile phase ( equals zero for energy transport)
+	double PRODF0 = 0; // for energy transport - zero-order rate of energy production in fluid
+	
+	double TICS = 0; // time to which the initial conditions correspond (not necessarily not equal to the starting time of the simulation t0)
+	double GNUP = 0; // specified pressure boundary condition "conductance" factor
+	double GNUU = 0; // specified concentration boundary condition "conductance" factor
+	double UP = 0; // fractional upstream weight for asymmetric weighting functions
+
+	double SCALT = 0; // scaling factor for times
+	
+	double TIMEI = 0; // initial time for a time cycle
+	double TIMEL = 0; // limiting time for a time cycle
+	double TIMEC = 0; // initial time increment for a time cycle
+	double TIME = 0;
+
+	double TCMULT; // multiplier for time increment
+	double TCMIN; // minimum time increment allowed
+	double TCMAX; // maximum time increment allowed
+	
+	double ISTEPI = 0; // initial step for a time step cycle
+	double ISTEPL = 0; // limiting time step for a time step cycle
+	double ISTEPC = 0; // time step increment for a time step cycle
+	
+	double RPMAX = 0; // pressure convergence criterion for iterations
+	double RUMAX = 0; // temperature or solution convergence criterion for resolving nonlinearities
+	
+	double TSTART;
+	double TFINISH;
+	
+	double RPM, RUM;
+	
+	double DLTPM1, DLTUM1, BDELP1, BDELP, BDELU, BDELU1;
+	bool setBCS = false;
+	
+	double IERRU, IERRP, IERR;
+	double CNUB, CNUBM1;
+	double RP, RU;
+	
+	double ERRP, ERRU;
+	
+	bool USEFL, ANYFL, ANYTR, SETFL, SETTR;
+	double XOBS = 0;
+	double YOBS = 0;
+	double ZOBS = 0;
+
+	double TOLP = 0; // convergence tolerance for solver iterations during P solution
+	double TOLU = 0; // convergence tolerance for solver iterations during U solution
+
+
 	double VXG[8] ;
 	double VYG[8] ;
 	double VZG[8] ;
@@ -587,91 +691,145 @@ private:
 	double RGXG[8] ;
 	double RGYG[8] ;
 	double RGZG[8] ;
-	vector<vector<double>> DWDXG;
-	vector<vector<double>> DWDYG;
-	vector<vector<double>> DWDZG;
-	vector<vector<double>> DFDXG;
-	vector<vector<double>> DFDYG;
-	vector<vector<double>> DFDZG;
-	vector<vector<double>> F;
-	vector<vector<double>> W;
 	double PORG[8];
-	void DISPR3(int i, int el,double VX,double VY,double VZ,double VMAG, double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG, double& DZXG, double& DZYG, double& DZZG);
-	void ROTATE(vector<vector<double>> rotMat, double v1, double v2, double v3, double& vr1, double& vr2, double& vr3);
-	void TENSYM(double DL, double DT1, double DT2, double VNX, double UNX, double WNX,double VNY, double UNY, double WNY, double VNZ, double UNZ, double WNZ,
-		double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG,double&DZXG, double& DZYG, double& DZZG);
-	int NL, NWI, NWF;
-	double DELTLC, RELCHG,TELAPS;
+
+
+	int NSOU; 
+	int NSOUI; // number of nodes at which a diffusive energy or solute mass flux(source) is specified
+	int	NSCH; 
+	int NSCHAU; // number of schedules
+	int NTLIST; // number of times listed
+	int NSLIST; // number of time steps listed
+	int NTMAX; // maximum number of time cycles allowed
+	int NTCYC; // number of cycle after which the time increment is updated
+	int ISTORE = 0;
+	int NSMAX; // maximum number of time step cycles
+	int NPCYC; // time steps in pressure solution cycle
+	int NUCYC; // time steps in temperature or concentration solution cycle
+	int ITRMAX; // maximum number of iterations for nonlinearities per time step
+	int IUNSAT;
+	int ISSFLO;
+	int ISSTRA;
+	int IREAD;
+	int NPRINT; // results are output to .lst file every NPRONT time steps
+	int NCOLPR; // results are output to .nod  file every NCOLPR timesteps
+	int LCOLPR; // results are output to .ele  file every NCOLPR timesteps
+	int KNODAL;
+	int KELMNT;
+	int KINCID;
+	int KCORT;
+	int KPAUSE;
+	int KSCRN; 
+	int KVEL; 
+	int KPANDS;
+	int KBUDG;
+	int NCOLMX;
+	int LCOLMX;
+	int NELT;
+	int NB;
+	int NBI;
+	int NBHALF;
+	int LEM;
+	int ITMAX;
+	int NRTEST;
+	int LRTEST;
+	int IT;
+	int ITRST; 
+	int ITREL; 
+	int ITER; 
+	int IPWORS; 
+	int IUWORS;
+	int KTPRN;
+	int ML;
+	int NCID;
+	int INTIM = 0;
+	int ISTOP = 0;
+	int IHALFB;
+	int KSOLVR; 
+	int KMT; 
+	int KPU;
+	int IGOI;
+	int ITRSP; 
+	int ITRSU;
+	int NBCN1; 
+	int NSOPI1; 
+	int NSOUI1;
+	int ITRMXP; // maximum number of solver iterations during P solution
+	int ITRMXU;// maximum number of solver iterations during U solution
+	int NOBS;
+	int NOBLIN;
+	int NPBC;
+	int NSOP;
+	int NSOPI;
+	int NUBC;
+	int NN; 
+	int NN1;
+	int NN2;
+	int NN3;
+	int NE; 
+	int NBLK1; 
+	int NBLK2;
+	int NBLK3;
+	int NL;
+	int NWI;
+	int NWF;
 	int NOUMAT;
 	int ITOUT;
-	double DURN, TOUT;
-	bool onceNOD = false;
-	bool onceOBS = false;
-	bool onceP = false;
-	bool onceBCS = false;
 	int  ITBCS;
-	int IQSOPT, IQSOUT, IPBCT, IUBCT,IBCT;
-	int NBCFPR, NBCSPR, NBCPPR, NBCUPR;
+	int IQSOPT;
+	int IQSOUT;
+	int IPBCT;
+	int IUBCT;
+	int IBCT;
+	int NBCFPR;
+	int NBCSPR;
+	int NBCPPR; 
+	int NBCUPR;
 	int KINACT;
-	double TMAX,TEMAX,TSEC,TSECP0,TSECU0,TSECM1,TMIN,THOUR,TMONTH,TDAY,TWEEK,TYEAR,DELT,DELTM1,DELTU,DELTP;
-	double SCALX, SCALY, SCALZ, PORFAC;
-	double PMAXFA, PMIDFA, PMINFA, ANG1FA, ANG2FA, ANG3FA, ALMAXF, ALMIDF, ALMINF, ATMXF, ATMDF, ATMNF,ANGFAC;
-	int NBCN, NOBSN, N48, NEX, NIN, NNNX, NDIMJA, NNVEC;
-	int ISYM, ITOL, NSAVE, ITRMX;
-	double TOL;
-
-	void DSICCG();
-	void DSLUOM();
-	void DSLUGM();
-	ControlParameters();
-	ControlParameters(ControlParameters const&){};
-	ControlParameters& operator = (ControlParameters const&){};
-	
-	virtual ~ControlParameters();
-	vector <ObservationPoints *> observationPointsContainer;
-	static ControlParameters* m_cInstance;
-	vector<Node *> nodeContainer; 
-	Node **nodeArray;
-	vector<Element *> elementContainer;
-	vector<Schedule *> listOfSchedules;
-	
-	int numberOfLayers;
-	double TEMP;
-	double PSTAR;
-	double GCONST;
-	double SMWH;
-	int timeStepDivide;
-	double waterTable;
-
-	vector<Layer *> layers;
-	unordered_map <string, DataSet *> dataSetMap;
-	vector<DataSet *> dataSetContainer;
-	// Data Set 1 - > 5 Data words
-		// 1- SUTRA	
-		// 2- VERSION
-		// 3- VERSION NUMBER
-		// 4- TYPE SOLUTE/ENERGY
-		// 5- TRANSPORT
-	string sSutra = "";
-	string vVersion = "";
-	string vVersionNum = "";
-	string simulationType = "";
-	string sTransport = "";
-	string TITLE1, TITLE2;
-	int ME; // set ME = -1 for solute transport set ME = +1 for energy Transport
-	string BCSSCH;
+	int NBCN; 
+	int NOBSN;
+	int N48; 
+	int NEX; 
+	int NIN; 
+	int NNNX;
+	int NDIMJA;
+	int NNVEC;
+	int ISYM; 
+	int ITOL; 
+	int NSAVE;
+	int ITRMX;
 	int KSOLVP;
 	int KSOLVU;
 	int ITOLU;
 	int ITOLP;
 	int NSAVEP;
 	int NSAVEU;
+	int ME; 
+	int numberOfLayers;
+	int timeStepDivide;
+	int NLAYS;
+	int NNLAY;
+	int NELAY; 
+	int KTYPE[2];
 
-	/* Mesh and Coordinate Data*/
-	double GRAVX; // x-component of gravity vector
-	double GRAVY; // y-component of gravity vector
-	double GRAVZ; // z-component of gravity vector
-	// x,y,z coordinates of all noted in the mesh is in node object
+	Node **nodeArray;
+	vector <ObservationPoints *> observationPointsContainer;
+	vector<Node *> nodeContainer; 
+	vector<Element *> elementContainer;
+	vector<Schedule *> listOfSchedules;
+	vector<Layer *> layers;
+	vector<DataSet *> dataSetContainer;
+	unordered_map <string, DataSet *> dataSetMap;
+
+	string sSutra = "";
+	string vVersion = "";
+	string vVersionNum = "";
+	string simulationType = "";
+	string sTransport = "";
+	string TITLE1, TITLE2;
+	string BCSSCH;
+
+	
 	string MSHSTR = ""; // Mesh Structure 
 	// "2D IRREGULAR"
 	// "2D REGULAR"
@@ -680,91 +838,52 @@ private:
 	// "3D LAYERED"
 	// "3D REGULAR"
 	// "3D IRREGULAR"
-	int NN; // total number of nodes in mesh
-	int NN1; // number of nodes in the first numbering direction (REGULAR or BLOCKWISE mesh only)
-	int NN2; // number of nodes in the second numbering direction (REGULAR or BLOCKWISE mesh only)
-	int NN3; // number of nodes in the third numbering direction (REGULAR or BLOCKWISE mesh only)
 
-	// Nodal incidence list stored in Node object
-
-	int NE; // number of elements in mesh
-	int NBLK1; //number of blocks in the first numbering direction (BLOCKWISE MESH only)
-	int NBLK2; //number of blocks in the second numbering direction (BLOCKWISE MESH only)
-	int NBLK3; //number of blocks in the third numbering direction (BLOCKWISE MESH only)
 
 	// Check this List part !!!!!!!
 	//LDIV1;
 	//LDIV2;
 	//LDIV3;
 
-	int NLAYS; // number of layers of nodes (LAYERED mesh only)
-	int NNLAY; // number of nodes in a layer (LAYERED mesh only)
-	int NELAY; // number of elements in a layer (LAYERED mesh only)
+
 
 	string LAYSTR = ""; // first numbering direction (LAYERED mesh only) - ACROSS or WITHIN
 
 	/* FLOW Parameters */
 
-	double COMPFL = 0; //FLUID compressibility
-	double COMPMA = 0; // Solid matrix compressibility
-	double VISC0 = 0; // for energy transport : scale factor for fluid viscosity
-	// for solute transport : fluid viscosity
-	// POR -- volumetric porosity of solid matrix at each node in node object
-	// PMAX, PMID, PMIN in each element in element object
-	// ANGLE1,2,3 in element object
-	double RHOW0 = 0; // fluid base density
-	double DRWDU = 0; // for energy transport : coefficient of fluid density change with temperature
-	// for solute transport : coefficient of fluid density change with concentration
-	double URHOW0 = 0; // for energy transport : base temperature for density calculation
-	// for solute transport : base concentration for density calculation
-
-
-	/* TRANSPORT Parameters */
-	//ALMAX, ALMID,ALMIN,ATMAX,ATMID,ATMIN are in element object
-	double SIGMAW; // for energy transport : fluid thermal conductivity
-	// for solute transport : molecular diffusivity of solute in fluid
-	double SIGMAS; // for energy transport : solid grain thermal conductivity (equals zero for solute transport)
-	double CW = 0;     // for energy transport : fluuid specific heat capacity ( equals one for solute transport)
-	double CS = 0;     // for energy transport : solid grain specific heat capacity ( not specified in input data for solute transport)
-	double RHOS = 0;   // density of a solid grain in the solid matrix;
-
+	
 	/* Reaction and production parameters */
-	double CHI1 = 0;
-	double CHI2 = 0;
-
-	double PRODF1 = 0; // for solute transport : rate of first-order production of adsorbate mass in the fluid mass ( equals zero for energy transport)
-	double PRODS1 = 0; // for solute transport : rate of first-order production of solute mass in the immobile phase ( equals zero for energy transport)
-	double PRODF0 = 0; // for energy transport - zero-order rate of energy production in fluid
+	
 	// for solute transport - zero-order rate of solute mass production in fluid
 	string ADSMOD;
 
-	double PRODS0 = 0; // for energy transport : zero-order rate of energy production in the immobile phase 
+	
 	// for solute transport : zero-order rate of adsorbate mass production in the immobile phase 
 
 	/* BOUNDARY CONDITIONS AND FLOW DATA */
 
 	//---- FLOW Data -- SPECIFIED PRESSURES ---- //
-	int NPBC; // number of nodes at which pressure is a specified constant or function of time
+	
 	vector<int> IPBC; // node number at which pressure is specified (for all NPBC nodes)
 	// PBC and UBC are in node object
 
 	//---- FLOW Data -- SPECIFIED FLOWS and FLUID SOURCES ---- //
-	int NSOP,NSOPI; // number of nodes at which a source of fluid mass is specified
+	
 	vector<int> IQSOP; // node number at which a fluid source is specified (for all NPBC nodes)
 	// QUINC, UINC are in node object
 
 	//---- ENERGY OR SOLUTE Data -- SPECIFIED TEMPERATURES or CONCENTRATIONS ---- //
-	int NUBC; // number of nodes at which temperature or concentration is a specified constant or function of time
+	
 	vector <int> IUBC; // node number at which temperature or concentration is specified (for all NUBC nodes)
 	// UBC is in node object
 
 	//---- ENERGY OR SOLUTE Data -- DIFFUSIVE FLUXES OF ENERGY or SOLUTE MASS AT BOUNDARIES ---- //
-	int NSOU,NSOUI; // number of nodes at which a diffusive energy or solute mass flux(source) is specified
+	
 	vector<int> IQSOU; // node number at which a flux(source) is specified
 	// QUINC is in node object
 
 	//----INITIAL CONDITIONS ---- //
-	double TICS = 0; // time to which the initial conditions correspond (not necessarily not equal to the starting time of the simulation t0)
+	
 	string CPUNI = "";// "UNIFORM" or "NONUNIFORM" (uniform initial P, nonuniform initial P)
 	string CUUNI = "";// "UNIFORM" or "NONUNIFORM" (uniform initial U, nonuniform initial U)
 
@@ -773,67 +892,27 @@ private:
 	// for energy transport: initial concentration at all nodes in mesh ( for uniform, a single value; for nonuniform, a list of values)
 
 	//---- Numerical and TEMPORAL CONTROL DATA ---- //
-	double GNUP = 0; // specified pressure boundary condition "conductance" factor
-	double GNUU = 0; // specified concentration boundary condition "conductance" factor
-	double UP = 0; // fractional upstream weight for asymmetric weighting functions
-	int	NSCH,NSCHAU; // number of schedules
+
 	string SCHNAM; // schedule name
 	string SCHTYP; // "TIME LIST"  "TIME CYCLE" "STEP LIST" "STEP CYCLE"
 	string CREFT; // "ABSOLUTE" "ELAPSED"
-	double SCALT = 0; // scaling factor for times
-	int NTLIST; // number of times listed
+	
 	list<double> TLIST; // list of times
-	int NTMAX; // maximum number of time cycles allowed
-	double TIMEI = 0; // initial time for a time cycle
-	double TIMEL = 0; // limiting time for a time cycle
-	double TIMEC = 0; // initial time increment for a time cycle
-	double TIME = 0;
-	int NTCYC; // number of cycle after which the time increment is updated
-	double TCMULT; // multiplier for time increment
-	double TCMIN; // minimum time increment allowed
-	double TCMAX; // maximum time increment allowed
-	int NSLIST; // number of time steps listed
 	list<int> ISLIST; // list of time steps
-	int NSMAX; // maximum number of time step cycles
-	double ISTEPI = 0; // initial step for a time step cycle
-	double ISTEPL = 0; // limiting time step for a time step cycle
-	double ISTEPC = 0; // time step increment for a time step cycle
-	int NPCYC; // time steps in pressure solution cycle
-	int NUCYC; // time steps in temperature or concentration solution cycle
-	int ITRMAX; // maximum number of iterations for nonlinearities per time step
-	double RPMAX = 0; // pressure convergence criterion for iterations
-	double RUMAX = 0; // temperature or solution convergence criterion for resolving nonlinearities
+	
+	string OBSNAM; // observation point name
 
 	//---- Matrix Equation Solver Data ---- //
 	string CSOLVP = ""; // "DIRECT" "CG" "GMRES" "ORTHOMIN"
 	string CSOLVU = ""; // "DIRECT" "GMRES" "ORTHOMIN"
-	int ITRMXP; // maximum number of solver iterations during P solution
-	int ITRMXU;// maximum number of solver iterations during U solution
-	double TOLP = 0; // convergence tolerance for solver iterations during P solution
-	double TOLU = 0; // convergence tolerance for solver iterations during U solution
 
-	//---- Data for Options ---- //
+
 	string CREAD = ""; // "COLD" or "WARM"
-	int ISTORE = 0;
 	string SIMULA = ""; // "SUTRA ENERGY" "SUTRA SOLUTE" 
 	string CUNSAT = "";// "UNSATURATED" "SATURATED"
-
 	string CSSFLO = ""; // "STEADY" "TRANSIENT"
 	string CSSTRA = ""; // "STEADY" "TRANSIENT"
-
-	string CVEL = ""; // "Y" = output fluid velocity at element centroids 
-	// "N" = no velocity outpuy
-	int IUNSAT;
-	int ISSFLO;
-	int ISSTRA;
-	int IREAD;
-
-	int NOBS; // number of observation points
-	int NOBLIN; // maximum number of observations output to a single line in a .obs file
-	string OBSNAM; // observation point name
-	double XOBS = 0;
-	double YOBS = 0;
-	double ZOBS = 0;
+	string CVEL = ""; // "Y" = output fluid velocity at element centroids 	
 	string CDUM80 = "";
 	string OBSSCH = ""; // name of schedule that controls output for an observation point
 	string OBSFMT = ""; // "OBS" or "OBC"
@@ -846,63 +925,30 @@ private:
 	string CINACT = "";  // "Y" or "N" - print inactive sources and boundary conduitoons input data in .bcof .bcos .bcop .bcou file
 	string CPAUSE = "";
 	string CSCRN = "";
-	int NPRINT; // results are output to .lst file every NPRONT time steps
-	int NCOLPR; // results are output to .nod  file every NCOLPR timesteps
-	int LCOLPR; // results are output to .ele  file every NCOLPR timesteps
+	
 	vector <string> NCOL; // list of variables to output in columns in the .nod file
 	vector <string> LCOL; // list of variables to output in columns in the .ele file
-	int KNODAL, KELMNT, KINCID, KCORT, KPAUSE, KSCRN, KVEL, KPANDS,KBUDG;
-	int KTYPE[2]; // DEPENDING ON MESH TYPE
-
-	int NCOLMX,LCOLMX;
-	int NELT;
-
-	// BANDWITH 
-	int NB;
-	int NBI;
-	int NBHALF;
-	int LEM;
+	
 	deque<string>writeContainer;
-	bool isNewRun;
-	bool isNewNod;
-	bool isNewObs;
-	bool isNewIA;
-	double TSTART;
-	double TFINISH;
+	
 	list<pair<double,double>>timeSteps;
 	list<pair<double, double>>step_0;
 	list<pair<double, double>>step_1;
 	list<pair<double, double>>step_1andUP;
-	int ITMAX;
-	int NRTEST,LRTEST;
-	int IT, ITRST, ITREL,ITER,IPWORS,IUWORS;
-	double RPM, RUM;
-	int KTPRN;
+	
+	
+	
+	Schedule * BCSSchedule = nullptr;
+	
+
+	
+
+	
 	vector<bool> BCSFL;
 	vector<bool> BCSTR;
-	int ML;
-	double DLTPM1, DLTUM1, BDELP1, BDELP, BDELU, BDELU1;
-	Schedule * BCSSchedule = nullptr;
-	bool setBCS = false;
-	int NCID;
 
-	int NBCN1, NSOPI1, NSOUI1;
-	bool USEFL, ANYFL, ANYTR, SETFL, SETTR;
 	vector<string>CIDBCS;
 	vector<BCS *> bcsContainer;
-	
-	int INTIM = 0;
-	int ISTOP = 0;
-	vector<vector<int>> nodeNeighbors;
-
-
-	int IHALFB;
-	int KSOLVR, KMT, KPU;
-	double IERRU, IERRP,IERR;
-	double CNUB, CNUBM1;
-	double RP, RU;
-	int IGOI;
-	double ERRP, ERRU, ITRSP, ITRSU;
 	vector<double> nodeVOL;
 	vector<double> node_p_rhs;
 	vector<double> node_u_rhs;
@@ -910,5 +956,23 @@ private:
 	vector<double> u_solution;
 	vector<double> p_rhs;
 	vector<double> u_rhs;
+	vector<vector<double>> DWDXG;
+	vector<vector<double>> DWDYG;
+	vector<vector<double>> DWDZG;
+	vector<vector<double>> DFDXG;
+	vector<vector<double>> DFDYG;
+	vector<vector<double>> DFDZG;
+	vector<vector<double>> F;
+	vector<vector<double>> W;
+	vector<vector<int>> nodeNeighbors;
+	vector<map<unsigned int, double>> stl_A;
+	vector<int> jJA;
+	viennacl::vector<double> vcl_rhs;
+	viennacl::vector<double> vcl_results;
+	
+	viennacl::vector<double> init_guess;
+	
+	vector<int>IAVec;
+	vector<int>JAVec;
 };
 #endif
