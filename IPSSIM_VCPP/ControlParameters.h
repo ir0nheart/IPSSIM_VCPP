@@ -48,6 +48,7 @@ public:
 	void GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution,int& ITRS,double& ERR);
 	void BiCGSTAB(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR);
 	void ORTHOMIN(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR);
+	void BUDGET();
 	// try for parsing
 	void printToFile(string fname);
 	void set_bcs(bool val){ setBCS = val; }
@@ -551,6 +552,7 @@ public:
 	void NODAL();
 	void BC();
 	void BASIS3(int ICALL,int el, int node,int realNode, double XLOC, double YLOC, double ZLOC,double &PORGT);
+	void JACOB (int el, int node, int realNode, double XLOC, double YLOC, double ZLOC, double &PORGT);
 	void UNSAT(double& SW, double& DSWDP, double& RELK, double PRES, double KREG);
 	void UNSAT(Node * node);
 	void BUBSAT(Node * node);
@@ -974,5 +976,6 @@ private:
 	
 	vector<int>IAVec;
 	vector<int>JAVec;
+
 };
 #endif

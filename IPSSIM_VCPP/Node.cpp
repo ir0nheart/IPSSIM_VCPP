@@ -31,6 +31,7 @@ Node & Node::operator = (Node &&rhs){
 	NodeNumber = rhs.NodeNumber;
 	return *this;
 }
+
 void Node::print_Node_Info(){
 	cout << setfill('#')<< setw(80) << ""<< endl;
 	cout << setfill('*') << setw(50);

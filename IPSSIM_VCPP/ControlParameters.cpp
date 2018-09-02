@@ -5264,6 +5264,7 @@ void ControlParameters::GLOCOL(int el, int ML, double VOLE[8], double BFLOWE[8][
 	for (int i = 0; i < N48; i++){
 		ib=elementContainer[el]->getElementNodes()[i] -1;
 		nodeVOL[ib] = nodeVOL[ib] + VOLE[i];
+		nodeContainer[ib+1]->setVOL(nodeVOL[ib]);
 		//nodePVEC[ib] = nodePVEC[ib] + DFLOWE[i];
 		node_p_rhs[ib] = node_p_rhs[ib] + DFLOWE[i];
 
@@ -6034,6 +6035,8 @@ void ControlParameters::setITERPARAMS(){
 }
 
 void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XLOC, double YLOC, double ZLOC,double & PORGT){
+	int nodeNum;
+	double ODET;
 	double XF1, XF2, YF1, YF2, ZF1, ZF2;
 	double XIIX[8] = { -1,  1,  1, -1, -1,  1,  1, -1 };
 	double YIIY[8] = { -1, -1,  1,  1, -1, -1,  1,  1 };
@@ -6077,7 +6080,7 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	PITERG = UITERG = CNUBG = DPDXG = DPDYG = DPDZG = 0;
 	VXG[8] = VYG[8] = VZG[8] = { 0 };
 	double DENOM, PGX, PGY, PGZ;
-	
+	double GXSI, GETA, GZET;
 	double VLMAG, VXL, VYL, VZL; // LOCAL VELOCITIES
 	double SWBG, RELKBG;
 	double DSWDPG;
@@ -6095,7 +6098,7 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	// CALCULATE ELEMENTS OF JACoBIAN MATRIX;
 	
 	for (int i = 0; i < 8; i++){
-		int nodeNum = elementNodes[el][i];
+		nodeNum = elementNodes[el][i];
 		CJ[0][0] = CJ[0][0] + DFDXL[i] * nodeContainer[nodeNum]->getXCoord();
 		CJ[0][1] = CJ[0][1] + DFDXL[i] * nodeContainer[nodeNum]->getYCoord();
 		CJ[0][2] = CJ[0][2] + DFDXL[i] * nodeContainer[nodeNum]->getZCoord();
@@ -6111,15 +6114,18 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 		CJ[1][0] * (CJ[0][1] * CJ[2][2] - CJ[2][1] * CJ[0][2]) +
 		CJ[2][0] * (CJ[0][1] * CJ[1][2] - CJ[1][1] * CJ[0][2]);
 	elementContainer[el]->putIntoDET(node,DET);
-	double ODET = 1.0 / DET;
+	ODET = 1.0 / DET;
 
-	double GXSI, GETA, GZET;
-	GXSI = CJ[0][0] * GRAVX + CJ[0][1] * GRAVY + CJ[0][2] * GRAVZ;
-	GETA = CJ[1][0] * GRAVX + CJ[1][1] * GRAVY + CJ[1][2] * GRAVZ;
-	GZET = CJ[2][0] * GRAVX + CJ[2][1] * GRAVY + CJ[2][2] * GRAVZ;
-	elementContainer[el]->putIntoGXSI(node, GXSI);
-	elementContainer[el]->putIntoGETA(node, GETA);
-	elementContainer[el]->putIntoGZET(node, GZET);
+	
+	
+	if (ICALL == 0){
+		GXSI = CJ[0][0] * GRAVX + CJ[0][1] * GRAVY + CJ[0][2] * GRAVZ;
+		GETA = CJ[1][0] * GRAVX + CJ[1][1] * GRAVY + CJ[1][2] * GRAVZ;
+		GZET = CJ[2][0] * GRAVX + CJ[2][1] * GRAVY + CJ[2][2] * GRAVZ;
+		elementContainer[el]->putIntoGXSI(node, GXSI);
+		elementContainer[el]->putIntoGETA(node, GETA);
+		elementContainer[el]->putIntoGZET(node, GZET);
+	}
 
 	if (ICALL == 0)
 		return;
@@ -6873,7 +6879,7 @@ void ControlParameters::solveTimeStep()
 
 	if (KBUDG == 1)
 	{
-		// Calculate BUDGET
+		BUDGET();
 	}
 
 	PRNK5 = (PRNDEF || ((IT != 0) && (IT%NCOLPR == 0)) || ((ITREL == 1 && NCOLPR > 0)));
@@ -6956,4 +6962,182 @@ void ControlParameters::BiCGSTAB(MatrixXd& MAT, vector<double>& rhs, vector<doub
 void ControlParameters::ORTHOMIN(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR)
 {
 	
+}
+
+void ControlParameters::JACOB(int el, int node, int realNode, double XLOC, double YLOC, double ZLOC, double & PORGT){
+	int nodeNum;
+	double ODET;
+	double XF1, XF2, YF1, YF2, ZF1, ZF2;
+	double XIIX[8] = { -1, 1, 1, -1, -1, 1, 1, -1 };
+	double YIIY[8] = { -1, -1, 1, 1, -1, -1, 1, 1 };
+	double ZIIZ[8] = { -1, -1, -1, -1, 1, 1, 1, 1 };
+	XF1 = 1 - XLOC;
+	XF2 = 1 + XLOC;
+	YF1 = 1 - YLOC;
+	YF2 = 1 + YLOC;
+	ZF1 = 1 - ZLOC;
+	ZF2 = 1 + ZLOC;
+	double FX[8] = { XF1, XF2, XF2, XF1, XF1, XF2, XF2, XF1 };
+	double FY[8] = { YF1, YF1, YF2, YF2, YF1, YF1, YF2, YF2 };
+	double FZ[8] = { ZF1, ZF1, ZF1, ZF1, ZF2, ZF2, ZF2, ZF2 };
+	double DWDXL[8] = { 0 };
+	double DWDYL[8] = { 0 };
+	double DWDZL[8] = { 0 };
+	double DFDXL[8] = { 0 };
+	double DFDYL[8] = { 0 };
+	double DFDZL[8] = { 0 };
+	double GXSI, GETA, GZET;
+	//double CJ[3][3] = {};
+	//double CIJ[3][3] = {};
+	vector<vector<double>> CJ(3, vector<double>(3));
+	vector<vector<double>> CIJ(3, vector<double>(3));
+	double DET;
+
+	for (int i = 0; i < 8; i++){
+		F[node][i] = 0.125*FX[i] * FY[i] * FZ[i];
+	}
+	// CALCULATE Derivatives wrt local coords
+	for (int i = 0; i < 8; i++){
+		DFDXL[i] = XIIX[i] * 0.125*FY[i] * FZ[i];
+		DFDYL[i] = YIIY[i] * 0.125*FX[i] * FZ[i];
+		DFDZL[i] = ZIIZ[i] * 0.125*FX[i] * FY[i];
+	}
+
+	// CALCULATE ELEMENTS OF JACoBIAN MATRIX;
+
+	for (int i = 0; i < 8; i++){
+		nodeNum = elementNodes[el][i];
+		CJ[0][0] = CJ[0][0] + DFDXL[i] * nodeContainer[nodeNum]->getXCoord();
+		CJ[0][1] = CJ[0][1] + DFDXL[i] * nodeContainer[nodeNum]->getYCoord();
+		CJ[0][2] = CJ[0][2] + DFDXL[i] * nodeContainer[nodeNum]->getZCoord();
+		CJ[1][0] = CJ[1][0] + DFDYL[i] * nodeContainer[nodeNum]->getXCoord();
+		CJ[1][1] = CJ[1][1] + DFDYL[i] * nodeContainer[nodeNum]->getYCoord();
+		CJ[1][2] = CJ[1][2] + DFDYL[i] * nodeContainer[nodeNum]->getZCoord();
+		CJ[2][0] = CJ[2][0] + DFDZL[i] * nodeContainer[nodeNum]->getXCoord();
+		CJ[2][1] = CJ[2][1] + DFDZL[i] * nodeContainer[nodeNum]->getYCoord();
+		CJ[2][2] = CJ[2][2] + DFDZL[i] * nodeContainer[nodeNum]->getZCoord();
+	}
+	// Calculate Determinant of Jacobian Matrix
+	DET = CJ[0][0] * (CJ[1][1] * CJ[2][2] - CJ[2][1] * CJ[1][2]) -
+		CJ[1][0] * (CJ[0][1] * CJ[2][2] - CJ[2][1] * CJ[0][2]) +
+		CJ[2][0] * (CJ[0][1] * CJ[1][2] - CJ[1][1] * CJ[0][2]);
+	elementContainer[el]->putIntoDET(node, DET);
+
+	GXSI = CJ[0][0] * GRAVX + CJ[0][1] * GRAVY + CJ[0][2] * GRAVZ;
+	GETA = CJ[1][0] * GRAVX + CJ[1][1] * GRAVY + CJ[1][2] * GRAVZ;
+	GZET = CJ[2][0] * GRAVX + CJ[2][1] * GRAVY + CJ[2][2] * GRAVZ;
+	elementContainer[el]->putIntoGXSI(node, GXSI);
+	elementContainer[el]->putIntoGETA(node, GETA);
+	elementContainer[el]->putIntoGZET(node, GZET);
+	ODET = 1.0 / DET;
+	CIJ[0][0] = +ODET*(CJ[1][1] * CJ[2][2] - CJ[2][1] * CJ[1][2]);
+	CIJ[0][1] = -ODET*(CJ[0][1] * CJ[2][2] - CJ[2][1] * CJ[0][2]);
+	CIJ[0][2] = +ODET*(CJ[0][1] * CJ[1][2] - CJ[1][1] * CJ[0][2]);
+	CIJ[1][0] = -ODET*(CJ[1][0] * CJ[2][2] - CJ[2][0] * CJ[1][2]);
+	CIJ[1][1] = +ODET*(CJ[0][0] * CJ[2][2] - CJ[2][0] * CJ[0][2]);
+	CIJ[1][2] = -ODET*(CJ[0][0] * CJ[1][2] - CJ[1][0] * CJ[0][2]);
+	CIJ[2][0] = +ODET*(CJ[1][0] * CJ[2][1] - CJ[2][0] * CJ[1][1]);
+	CIJ[2][1] = -ODET*(CJ[0][0] * CJ[2][1] - CJ[2][0] * CJ[0][1]);
+	CIJ[2][2] = +ODET*(CJ[0][0] * CJ[1][1] - CJ[1][0] * CJ[0][1]);
+}
+
+void ControlParameters::BUDGET()
+{
+	int MN = 2;
+	int nodeNum;
+	double STPPOS, STPNEG, STUPOS, STUNEG, QINPOS, QINNEG;
+	STPPOS = STPNEG = STUPOS = STUNEG = QINPOS = QINNEG = 0.0;
+	double TERM;
+	double STPTOT, STUTOT, STFPOS, STFNEG, STFTOT, QINTOT;
+	double QPLPOS, QPLNEG,QPLTOT,QFFPOS,QFFNEG,QFFTOT;
+	double ACTFMB, ERFMBA,ERFMBR;
+	if (IUNSAT != 0)
+		IUNSAT = 1;
+
+	if (ME == -1)
+		MN = 1;
+
+	if (IUNSAT - 1 == 0)
+	{
+		for (int i = 1; i <= NN; i++)
+		{
+			if (nodeContainer[i]->getPVEC()<0)
+			{
+				UNSAT(nodeContainer[i]);
+			} else
+			{
+				nodeContainer[i]->setSW(1.0);
+				nodeContainer[i]->setDSWDP(0.0);
+			}
+		}
+		for (int i = 1; i <= NN; i++)
+			BUBSAT(nodeContainer[i]);
+	}
+		if (ML - 1 <= 0)
+		{
+			for (int i = 1; i <= NN; i++)
+			{
+				TERM = (1 - ISSFLO / 2)*nodeContainer[i]->getRHO()*nodeContainer[i]->getVOL()*
+					(nodeContainer[i]->getSWT()*nodeContainer[i]->getSOP() + nodeContainer[i]->getPorosity()*nodeContainer[i]->getDSWDP())*
+					(nodeContainer[i]->getPVEC() - nodeContainer[i]->getPM1()) / DELTP;
+				STPPOS = STPPOS + max(0.0, TERM);
+				STPNEG = STPNEG + min(0.0, TERM);
+				TERM = (1 - ISSFLO / 2)*nodeContainer[i]->getPorosity()*nodeContainer[i]->getSWT()*DRWDU*nodeContainer[i]->getVOL()*
+					(nodeContainer[i]->getUM1() - nodeContainer[i]->getUM2()) / DLTUM1;
+				STUPOS = STUPOS + max(0.0, TERM);
+				STUNEG = STUNEG + min(0.0, TERM);
+				TERM = nodeContainer[i]->getQIN();
+				QINPOS = QINPOS + max(0.0, TERM);
+				QINNEG = QINNEG + min(0.0, TERM);
+			}
+			STPTOT = STPPOS + STPNEG;
+			STUTOT = STUPOS + STUNEG;
+			STFPOS = STPPOS + STUPOS;
+			STFNEG = STPNEG + STUNEG;
+			STFTOT = STPTOT + STUTOT;
+			QINTOT = QINPOS + QINNEG;
+
+			QPLPOS = 0.0;
+			QPLNEG = 0.0;
+
+			for (int i = 0; i < NPBC; i++)
+			{
+				nodeNum = abs(IPBC[i]);
+				TERM = nodeContainer[nodeNum]->getGNUP1()*(nodeContainer[nodeNum]->getPBC() - nodeContainer[nodeNum]->getPVEC());
+				QPLPOS = QPLPOS + max(0.0, TERM);
+				QPLNEG = QPLNEG + min(0.0, TERM);
+			}
+			QPLTOT = QPLPOS + QPLNEG;
+			QFFPOS = QINPOS + QPLPOS;
+			QFFNEG = QINNEG + QPLNEG;
+			QFFTOT = QINTOT + QPLTOT;
+
+			ACTFMB = 0.5*(STFPOS - STFNEG + QFFPOS - QFFNEG);
+			ERFMBA = STFTOT - QFFTOT;
+			// Write To File;
+
+			if (ACTFMB != 0)
+			{
+				ERFMBR = 100*ERFMBA / ACTFMB;
+			}
+
+			if (IBCT != 4)
+			{
+				
+			}
+
+			if (NPBC != 0)
+			{
+				
+			}
+
+			
+		} 
+
+		if (ML - 1 != 0)
+		{
+			
+		}
+	
+
 }

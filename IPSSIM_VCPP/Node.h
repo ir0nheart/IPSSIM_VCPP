@@ -160,7 +160,10 @@ public:
 	double getUIN1();
 	double getUBC1();
 	double getPBC1();
-private: 
+	void setVOLTry(double * ptr){ VolTry = ptr; }
+	double getVolTry(){ return *VolTry; }
+private:
+	double * VolTry;
 	Layer * layer;
 	int layerN;
 	int NodeNumber;

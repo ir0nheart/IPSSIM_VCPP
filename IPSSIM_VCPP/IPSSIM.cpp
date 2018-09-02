@@ -123,8 +123,14 @@ void main(){
 	Writer * logWriter = Writer::LSTInstance(); // Create Writer Class for Logging LST file
 	// Create Two Timers : Used in Debugging. Timer t -> for elapsed time in a function, Timer gent -> Timer for total elapsed time
 	Timer mainTimer,tempTimer;
+	// Use for Advance The Code
+	//double vol = 123213;
+	//Node N = Node(213);
+	//N.setVOLTry(&vol);
+	//cout << N.getVolTry() << endl;
+	//vol = 1213;
+	//cout << N.getVolTry() << endl;
 
-	
 	
 	// Create object for storing input and output file names.
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
@@ -575,10 +581,10 @@ SH:
 		}
 		
 	}
-	controlParameters->printToFile(string("beforeNodal.txt"));
+	//controlParameters->printToFile(string("beforeNodal.txt"));
 
 	controlParameters->NODAL();
-	controlParameters->printToFile(string("beforeBC.txt"));
+	//controlParameters->printToFile(string("beforeBC.txt"));
 	controlParameters->BC();
 
 	controlParameters->solveTimeStep();
@@ -587,6 +593,15 @@ SH:
 		controlParameters->setISTOP(-1);
 	if (controlParameters->getIGOI() > 0 && controlParameters->getISTOP() == 0 && controlParameters->getIERR() == 0)
 		goto BEGINITERATION;
+
+	if (controlParameters->getIERR() == 0){
+		if (controlParameters->getISTORE() != 0 && (controlParameters->getISTOP() != 0 || (controlParameters->getIT() % controlParameters->getISTORE() == 0)))
+		{
+			cout << " OUTRST" << endl;
+		}
+		if (controlParameters->getISTOP() == 0)
+			goto BEGINTIMESTEP;
+	}
 
 
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);

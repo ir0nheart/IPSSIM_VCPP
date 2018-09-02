@@ -169,7 +169,8 @@ public:
 	void setGZET(double * GZET);
 	void setDET(double * DET);
 
-	
+	void setCJ(vector<vector<double>>& VEC){ CJ.assign(VEC.begin(), VEC.end()); }
+	void setCIJ(vector<vector<double>>& VEC){ CIJ.assign(VEC.begin(), VEC.end()); }
 
 	void putIntoGETA(int ind, double GETA);
 	void putIntoGXSI(int ind, double GXSI);
@@ -219,7 +220,8 @@ private:
 	double * GZET;
 	double * DET;
 	double VMAG, VANG1, VANG2;
-
+	vector<vector<double>>CJ;
+	vector<vector<double>>CIJ;
 	/*double ** F;
 	double ** W;
 	double ** DWDXG;
