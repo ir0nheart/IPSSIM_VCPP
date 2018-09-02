@@ -239,9 +239,11 @@ void DataSet::parseDataSet_2B(){
 	CP -> setMSHSTR(dataPos.at(0) + " " + dataPos.at(1));
 	if (dataPos.at(0) == "2D"){
 		CP->setKTYPE(0, 2);
+		CP->setN48(4);
 	}
 	else if (dataPos.at(0) == "3D"){
 		CP->setKTYPE(0,3);
+		CP->setN48(8);
 	}
 	else{
 		CP->exitOnError("INP-2B-1");

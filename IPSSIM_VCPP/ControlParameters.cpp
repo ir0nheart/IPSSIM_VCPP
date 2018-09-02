@@ -632,8 +632,10 @@ nodeSOP = new double[NN + 1];
 nodeQIN = new double[NN + 1]{};
 nodeUIN = new double[NN + 1]{};
 nodeQUIN = new double[NN + 1]{};
-nodePVEC = new double[NN + 1]{};
-nodeUVEC = new double[NN + 1]{};
+//nodePVEC = new double[NN + 1]{};
+//nodeUVEC = new double[NN + 1]{};
+nodePVEC = vector<double>(NN + 1, 0);
+nodeUVEC = vector<double>(NN + 1, 0);
 //nodeVOL = new double[NN + 1]{};
 //node_p_rhs = new double[NN]{};
 nodeVOL = vector<double>(NN + 1, 0);
@@ -643,8 +645,20 @@ nodePBC = vector<double>(NN +1, 0);
 nodeUBC = vector<double>(NN +1, 0);
 p_solution = vector<double>(NN, 0);
 u_solution = vector<double>(NN, 0);
-p_rhs.reserve(NN);
-u_rhs.reserve(NN);
+p_rhs = vector<double>(NN, 0);
+u_rhs = vector<double>(NN, 0);
+F = vector<vector<double>>(N48, vector<double>(N48, 0));
+W = vector<vector<double>>(N48, vector<double>(N48, 0));
+DWDXG = vector<vector<double>>(N48, vector<double>(N48, 0));
+DWDYG = vector<vector<double>>(N48, vector<double>(N48, 0));
+DWDZG = vector<vector<double>>(N48, vector<double>(N48, 0));
+DFDXG = vector<vector<double>>(N48, vector<double>(N48, 0));
+DFDYG = vector<vector<double>>(N48, vector<double>(N48, 0));
+DFDZG = vector<vector<double>>(N48, vector<double>(N48, 0));
+init_guess = viennacl::scalar_vector<double>(NN,double(1.0));
+
+//p_rhs.reserve(NN);
+//u_rhs.reserve(NN);
 nodeContainer.reserve(NN+1);
 
 Timer t;
@@ -4666,20 +4680,20 @@ void ControlParameters::BCSTEP(){
 void ControlParameters::ELEMN3(){
  // Too Much to Do
 
-	for (int i = 0; i < 8; i++){
-		vector<double> vec;
-		for (int j = 0; j < 8; j++){
-			vec.push_back(0);	
-		}
-		F.push_back(vec);
-		W.push_back(vec);
-		DWDXG.push_back(vec);
-		DWDYG.push_back(vec);
-		DWDZG.push_back(vec);
-		DFDXG.push_back(vec);
-		DFDYG.push_back(vec);
-		DFDZG.push_back(vec);
-	}
+	//for (int i = 0; i < 8; i++){
+	//	vector<double> vec;
+	//	for (int j = 0; j < 8; j++){
+	//		vec.push_back(0);	
+	//	}
+	//	F.push_back(vec);
+	//	W.push_back(vec);
+	//	DWDXG.push_back(vec);
+	//	DWDYG.push_back(vec);
+	//	DWDZG.push_back(vec);
+	//	DFDXG.push_back(vec);
+	//	DFDYG.push_back(vec);
+	//	DFDZG.push_back(vec);
+	//}
 	double GLOC = 0.577350269189626;
 	// Decide Whether to Calculate Centroid velocities on this call
 	double GXLOC[8] = { -1, 1, 1, -1, -1, 1, 1, -1 };
@@ -5001,47 +5015,7 @@ void ControlParameters::ELEMN3(){
 				}
 			}
 
-		/*	Writer * logWriter = Writer::ELEInstance();
-			string logLine = "";
-			char buff[512];
-			_snprintf(buff, sizeof(buff), "Element %9d", el);
-			logLine.append(buff);
-			logLine.append("\nVOLE");
-			for (int i = 0; i < 8; i++){
 				
-					_snprintf(buff, sizeof(buff), "  %+14.7e", VOLE[i]);
-					logLine.append(buff);
-			}
-			for (int i = 0; i < 8; i++){
-				logLine.append("\nBFLOWE");
-				for (int j = 0; j < 8; j++){
-					_snprintf(buff, sizeof(buff), "  %+14.7e", BFLOWE[i][j]);
-					logLine.append(buff);
-				}
-			}
-			logLine.append("\nDFLOWE");
-			for (int j = 0; j < 8; j++){
-				_snprintf(buff, sizeof(buff), "  %+14.7e", DFLOWE[j]);
-				logLine.append(buff);
-			}
-
-			for (int i = 0; i < 8; i++){
-				logLine.append("\nBTRANE");
-				for (int j = 0; j < 8; j++){
-					_snprintf(buff, sizeof(buff), "  %+14.7e", BTRANE[i][j]);
-					logLine.append(buff);
-				}
-			}
-			for (int i = 0; i < 8; i++){
-				logLine.append("\nDTRANE");
-				for (int j = 0; j < 8; j++){
-					_snprintf(buff, sizeof(buff), "  %+14.7e", DTRANE[i][j]);
-					logLine.append(buff);
-				}
-			}
-
-			logWriter->writeContainer.push_back(logLine);*/
-		
 			if (KSOLVP == 0){
 				GLOBAN();
 			}
@@ -5463,7 +5437,8 @@ void ControlParameters::NODAL()
 			CFLN = CFLN*DUDT - (nodeContainer[i]->getSW()*GCONST*TEMP*nodeContainer[i]->getPorosity()*nodeContainer[i]->getRHO()*(pow(nodeContainer[i]->getSWB(), 2) / term2)*(0.5*-1 * PRODF1*(nodeContainer[i]->getRHO()*nodeContainer[i]->getUITER() / SMWH)))*nodeContainer[i]->getVOL();
 			PMAT(IMID, JMID) = PMAT(IMID, JMID) + AFLN;
 			term4 = node_p_rhs[i-1] - CFLN + AFLN * nodeContainer[i]->getPM1() + nodeContainer[i]->getQIN();
-			p_rhs.push_back(term4);
+			p_rhs[i - 1] = term4;
+			//p_rhs.push_back(term4);
 
 			if ((ML - 1) == 0)
 				continue;
@@ -5720,7 +5695,7 @@ void ControlParameters::BC()
 		
 	}
 	for (int i = 1; i <= NN; i++)
-		u_rhs.push_back(nodeUVEC[i]);
+		u_rhs[i-1]=nodeUVEC[i];
 }
 void ControlParameters::UNSAT(Node * node)
 { // Args  SW,DSWDP,RELK,PRES,KREG
@@ -6708,6 +6683,10 @@ void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT,vector<double>
 	}
 	else if (KSOLVR == 2)
 	{
+		/*if (KPU == 0)
+			copy(nodePVEC.begin() + 1, nodePVEC.end(), init_guess.begin());
+		else
+			copy(nodeUVEC.begin() + 1, nodeUVEC.end(), init_guess.begin());*/
 		GMRES(MAT,rhs,solution,ITRS,ERR);
 	}
 	else
@@ -6927,7 +6906,7 @@ void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>
 
 	for (int jk = 0; jk < IAVec.size(); jk++)
 	{
-		stl_A[jJA[jk]].emplace(IAVec[jk], PMAT(jk, 0));
+		stl_A[jJA[jk]].emplace(IAVec[jk], MAT(jk, 0));
 	}
 
 	copy(rhs.begin(), rhs.end(), vcl_rhs.begin());
@@ -6942,7 +6921,7 @@ void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>
 	viennacl::linalg::ilu0_precond<viennacl::compressed_matrix<double>> ilu0(A, viennacl::linalg::ilu0_tag());
 	viennacl::linalg::gmres_tag my_gmres_tag(1e-13, 2000, 30);
 	viennacl::linalg::gmres_solver<viennacl::vector<double> > my_gmres_solver(my_gmres_tag);
-	init_guess = viennacl::scalar_vector<double>(NN, double(0.9));
+	//init_guess = viennacl::scalar_vector<double>(NN, double(0.9));
 	init_guess[0] = 0;
 	monitor_user_data<viennacl::compressed_matrix<double>, viennacl::vector<double> > my_monitor_data(A, vcl_rhs, init_guess);
 	my_gmres_solver.set_monitor(my_custom_monitor<viennacl::vector<double>, double, viennacl::compressed_matrix<double> >, &my_monitor_data);
@@ -7140,4 +7119,17 @@ void ControlParameters::BUDGET()
 		}
 	
 
+}
+
+void ControlParameters::ZeroVectorsAndMatrix()
+{
+	PMAT = MatrixXd::Zero(NELT, 1);
+	UMAT = MatrixXd::Zero(NELT, 1);
+	for (int i = 0; i < NN; i++)
+	{
+		nodeVOL[i] = 0;
+		node_p_rhs[i] = 0;
+		node_u_rhs[i] = 0;
+
+	}
 }

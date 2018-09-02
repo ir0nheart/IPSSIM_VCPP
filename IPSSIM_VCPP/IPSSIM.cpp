@@ -558,7 +558,7 @@ SH:
 	//	3375 CALL ZERO(UVEC, NNVEC, 0.0D0)                                        SUTRA........43000
 	//	ccc      CALL ZERO(CNUB, NN, 0.0D0)                                          !alden 110111 commented out
 	//	3400 CONTINUE                                                           SUTRA........43100
-
+	controlParameters->ZeroVectorsAndMatrix();
 
 	if (controlParameters->getITER() == 1 && controlParameters->getIBCT() != 4)
 		controlParameters->BCTIME();

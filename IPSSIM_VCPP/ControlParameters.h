@@ -66,8 +66,8 @@ public:
 	double * nodeQIN;
 	double * nodeUIN;
 	double * nodeQUIN;
-	double * nodePVEC;
-	double * nodeUVEC;
+	//double * nodePVEC;
+	//double * nodeUVEC;
 	/*double * nodeVOL;
 	double * node_p_rhs;*/
 	int IMID, JMID;
@@ -580,6 +580,7 @@ public:
 	void ROTATE(vector<vector<double>> rotMat, double v1, double v2, double v3, double& vr1, double& vr2, double& vr3);
 	void TENSYM(double DL, double DT1, double DT2, double VNX, double UNX, double WNX, double VNY, double UNY, double WNY, double VNZ, double UNZ, double WNZ,
 		double& DXXG, double& DXYG, double& DXZG, double& DYXG, double& DYYG, double& DYZG, double&DZXG, double& DZYG, double& DZZG);
+	void ZeroVectorsAndMatrix();
 private:
 
 	static ControlParameters* m_cInstance;
@@ -973,7 +974,8 @@ private:
 	viennacl::vector<double> vcl_results;
 	
 	viennacl::vector<double> init_guess;
-	
+	vector<double>nodePVEC;
+	vector<double>nodeUVEC;
 	vector<int>IAVec;
 	vector<int>JAVec;
 
