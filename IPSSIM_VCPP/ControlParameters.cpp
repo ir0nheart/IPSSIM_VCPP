@@ -2907,6 +2907,10 @@ void ControlParameters::createElements(){
 			elementContainer[i]->setDET(new double[8]);
 
 		}
+		VXG = vector<double>(8, 0);
+		VYG = vector<double>(8, 0);
+		VZG = vector<double>(8, 0);
+		VGMAG = vector<double>(8, 0);
 	}
 	else if (KTYPE[0] == 2){
 		for (int i = 1; i <= NE; i++){
@@ -4743,13 +4747,18 @@ void ControlParameters::ELEMN3(){
 		//LOOP THROUGH ALL ELEMENTS TO CARRY OUT SPATIAL INTEGRATION OF FLUX TERMS IN P AND / OR U EQUATIONS
 
 		for (int el = 1; el <= NE; el++){
-			double VOLE[8] = {0};
+			vector<double>VOLE(8, 0);
+			vector<double>DFLOWE(8, 0);
+			vector<vector<double>>BFLOWE(8, vector<double>(8, 0));
+			vector<vector<double>>BTRANE(8, vector<double>(8, 0));
+			vector<vector<double>>DTRANE(8, vector<double>(8, 0));
+		/*	double VOLE[8] = {0};
 			double DFLOWE[8] = {};
 			double BFLOWE[8][8] = {};
 			double BTRANE[8][8];
-			double DTRANE[8][8];
+			double DTRANE[8][8];*/
 			double RDDFJX, RDDFJY, RDDFJZ;
-			for (int i = 0; i < 8; i++){
+		/*	for (int i = 0; i < 8; i++){
 				VOLE[i] = 0;
 				DFLOWE[i] = 0;
 				for (int j = 0; j < 8; j++){
@@ -4758,7 +4767,9 @@ void ControlParameters::ELEMN3(){
 					BTRANE[i][j] = 0;
 					DTRANE[i][j] = 0;
 				}
-			}
+			}*/
+
+
 			double XIX, YIY, ZIZ;
 			XIX = YIY = ZIZ = -1.0;
 			double XLOC, YLOC, ZLOC;
@@ -5231,7 +5242,7 @@ void ControlParameters::ROTATE(vector<vector<double>> rotMat, double v1, double 
 	vr3 = v1 * rotMat[0][0] + v2 * rotMat[0][1] + v3 * rotMat[0][2];
 	
 }
-void ControlParameters::GLOCOL(int el, int ML, double VOLE[8], double BFLOWE[8][8], double DFLOWE[8], double BTRANE[8][8], double DTRANE[8][8])
+void ControlParameters::GLOCOL(int el, int ML, vector<double>& VOLE,vector<vector<double>>& BFLOWE, vector<double>& DFLOWE,vector<vector<double>>&BTRANE, vector<vector<double>>&DTRANE)//double VOLE[8], double BFLOWE[8][8], double DFLOWE[8], double BTRANE[8][8], double DTRANE[8][8])
 {
 	int ib, jb,M;
 	ib = jb = M = -1;
@@ -6053,7 +6064,7 @@ void ControlParameters::BASIS3(int ICALL,int el,int node,int realNode, double XL
 	double ADFDXL, ADFDYL, ADFDZL;
 	double PITERG, UITERG, CNUBG, DPDXG, DPDYG, DPDZG;
 	PITERG = UITERG = CNUBG = DPDXG = DPDYG = DPDZG = 0;
-	VXG[8] = VYG[8] = VZG[8] = { 0 };
+	//VXG[8] = VYG[8] = VZG[8] = { 0 };
 	double DENOM, PGX, PGY, PGZ;
 	double GXSI, GETA, GZET;
 	double VLMAG, VXL, VYL, VZL; // LOCAL VELOCITIES
@@ -6608,7 +6619,7 @@ double ControlParameters::DNRM2(int N, vector<double>& X, int INCX)
 }
 
 
-void ControlParameters::solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,double& IERR, int& ITRS, double& ERR){
+void ControlParameters::solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,int& ITRMXS,double& IERR, int& ITRS, double& ERR){
 	char* KPUTEXT[2] = { "P", "U" };
 	double RHSNRM = DNRM2(NNVEC, rhs, 1);
 	if (RHSNRM == 0.0)
@@ -6635,7 +6646,7 @@ void ControlParameters::solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector
 	}
 	else
 	{
-		SOLWRP(KPU, KSOLVR, MAT, rhs,solution,ITRS,ERR);
+		SOLWRP(KPU, KSOLVR, MAT, rhs,solution,ITRMXS,ITRS,ERR);
 	}
 
 }
@@ -6646,7 +6657,7 @@ void ControlParameters::SOLVEB(int KMT, MatrixXd& MAT, vector<double>&rhs, vecto
 	
 }
 
-void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT,vector<double>&rhs , vector<double>& solution, int& ITRS, double& ERR)
+void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT,vector<double>&rhs , vector<double>& solution,int& ITRMXS,int& ITRS, double& ERR)
 {
 	//SOLWRP(KPU, KSOLVR, A, R, XITER, B, NNP,IWK, FWK, IA, JA, IERR, ITRS, ERR)
 	//SOLWRP(KPU, KSOLVR, C, R, XITER, B, NNP, IWK, FWK, IA, JA, IERR, ITRS, ERR)
@@ -6687,7 +6698,7 @@ void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT,vector<double>
 			copy(nodePVEC.begin() + 1, nodePVEC.end(), init_guess.begin());
 		else
 			copy(nodeUVEC.begin() + 1, nodeUVEC.end(), init_guess.begin());*/
-		GMRES(MAT,rhs,solution,ITRS,ERR);
+		GMRES(MAT,rhs,solution,ITRMXS,ITRS,ERR);
 	}
 	else
 	{
@@ -6696,11 +6707,11 @@ void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT,vector<double>
 
 	if (IERR == 0)
 	{
-		cout << KPUTEXT[KPU] << "-solution converged in " << ITRS << " solver iterations (Error ~ " << ERR << ")" << endl;
+		cout << "       " << KPUTEXT[KPU] << "-solution converged in " << ITRS << " solver iterations (Error ~ " << ERR << ")" << endl;
 	}
 	else
 	{
-		cout << KPUTEXT[KPU] << "-solution FAILED after " << ITRS << " solver iterations (Error ~ " << ERR << ")" << endl;
+		cout << "       " << KPUTEXT[KPU] << "-solution FAILED after " << ITRS << " solver iterations (Error ~ " << ERR << ")" << endl;
 	}
 
 }
@@ -6726,7 +6737,7 @@ void ControlParameters::solveTimeStep()
 		KPU = 0;
 		KSOLVR = KSOLVP;
 		//  SOLVER(KMT,KPU,KSOLVR,PMAT,PVEC,PITER,B,NN,IHALFB,NELT,NCBI,IWK, FWK, IA, JA, IERRP, ITRSP, ERRP)
-		solveEquation(KPU,KSOLVR,PMAT,p_rhs,p_solution,IERRP,ITRSP,ERRP);
+		solveEquation(KPU,KSOLVR,PMAT,p_rhs,p_solution,ITRMXP,IERRP,ITRSP,ERRP);
 		// P solution is now in PVEC
 		for (int i = 1; i <= NN; i++)
 			nodeContainer[i]->setPVEC(p_solution[i - 1]);
@@ -6746,9 +6757,11 @@ void ControlParameters::solveTimeStep()
 		KMT = 0;
 		KPU = 1;
 		KSOLVR = KSOLVU;
-		solveEquation(KPU,KSOLVR, UMAT, u_rhs,u_solution, IERRU, ITRSU, ERRU);
-		for (int i = 1; i <= NN; i++)
+		solveEquation(KPU,KSOLVR, UMAT, u_rhs,u_solution, ITRMXU,IERRU, ITRSU, ERRU);
+		for (int i = 1; i <= NN; i++){
 			nodeContainer[i]->setUVEC(u_solution[i - 1]);
+			nodeUVEC[i-1] = u_solution[i - 1];
+		}
 		// U solution is now in UVEC
 	}
 
@@ -6897,8 +6910,20 @@ void ControlParameters::printToFile(string fname)
 		rhsStream << p_rhs[i] << endl;
 	}
 }
+void ControlParameters::printUMATToFile(string fname)
+{
+	string filename = InputFiles::Instance()->getInputDirectory() + "\\" + fname;
+	ofstream rhsStream;
 
-void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR)
+	rhsStream.open(filename, std::ios_base::out);
+	rhsStream << UMAT.size() << endl;
+	for (int i = 0; i < UMAT.size(); i++)
+	{
+		rhsStream << UMAT(i,0) << endl;
+	}
+}
+
+void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution,int& ITRMXS, int& ITRS, double& ERR)
 {
 	//std::vector<map<unsigned int, double>> stl_A(NN, map<unsigned int, double>());
 	//vector<int> jJA;
@@ -6919,7 +6944,7 @@ void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>
 	viennacl::compressed_matrix<double> A;
 	viennacl::copy(stl_A, A);
 	viennacl::linalg::ilu0_precond<viennacl::compressed_matrix<double>> ilu0(A, viennacl::linalg::ilu0_tag());
-	viennacl::linalg::gmres_tag my_gmres_tag(1e-13, 2000, 30);
+	viennacl::linalg::gmres_tag my_gmres_tag(1e-13, ITRMXS, ITRMXS/10);
 	viennacl::linalg::gmres_solver<viennacl::vector<double> > my_gmres_solver(my_gmres_tag);
 	//init_guess = viennacl::scalar_vector<double>(NN, double(0.9));
 	init_guess[0] = 0;

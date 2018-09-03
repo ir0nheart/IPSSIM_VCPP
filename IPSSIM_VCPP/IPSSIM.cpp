@@ -131,7 +131,7 @@ void main(){
 	//vol = 1213;
 	//cout << N.getVolTry() << endl;
 
-	
+
 	// Create object for storing input and output file names.
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Creating storage object for input files" << endl;
@@ -582,8 +582,9 @@ SH:
 		
 	}
 	//controlParameters->printToFile(string("beforeNodal.txt"));
-
+	//controlParameters->printUMATToFile("UMATAfterElement.txt");
 	controlParameters->NODAL();
+	//controlParameters->printUMATToFile("UMATAfterNodal.txt");
 	//controlParameters->printToFile(string("beforeBC.txt"));
 	controlParameters->BC();
 

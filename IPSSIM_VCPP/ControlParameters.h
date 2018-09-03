@@ -44,8 +44,8 @@ class DataSet;
 class ControlParameters
 {
 public:
-
-	void GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution,int& ITRS,double& ERR);
+	void printUMATToFile(string fname);
+	void GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution,int& ITRMXS,int& ITRS,double& ERR);
 	void BiCGSTAB(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR);
 	void ORTHOMIN(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR);
 	void BUDGET();
@@ -496,9 +496,9 @@ public:
 	void setOnceOBS(bool val);
 	void setTIME(double val);
 	double getTIME();
-	void solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,double &IERR, int &ITRS, double & ERR);
+	void solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,int &ITRMXS,double &IERR, int &ITRS, double & ERR);
 	void SOLVEB(int KMT, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution);
-	void SOLWRP(int KPU, int KSOLVR,MatrixXd& MAT, vector<double>&rhs, vector<double>& solution, int& ITRS,double &ERR);
+	void SOLWRP(int KPU, int KSOLVR,MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,int& ITRMXS,int& ITRS,double &ERR);
 
 	void setML(int val);
 	int getML();
@@ -557,7 +557,7 @@ public:
 	void UNSAT(Node * node);
 	void BUBSAT(Node * node);
 	void BUBSAT(double& SWBG, double&  RELKBG, double  PITERG, double  CNUBG, double&  RELKTG, double& SWTG, double SWG, double  RELKG);
-	void GLOCOL(int el, int ML,double VOLE[8], double BFLOWE[8][8],double DFLOWE[8], double BTRANE[8][8],double DTRANE[8][8]);
+	void GLOCOL(int el, int ML, vector<double>& VOLE, vector<vector<double>>& BFLOWE, vector<double>& DFLOWE, vector<vector<double>>&BTRANE, vector<vector<double>>&DTRANE);
 	void GLOBAN();
 	void createSolverMatrix();
 	void DIMWRK(int KSOLVR,int NSAVE,int& NWI, int& NWF);
@@ -683,10 +683,14 @@ private:
 	double TOLU = 0; // convergence tolerance for solver iterations during U solution
 
 
-	double VXG[8] ;
+	/*double VXG[8] ;
 	double VYG[8] ;
 	double VZG[8] ;
-	double VGMAG[8] ;
+	double VGMAG[8];*/
+	vector<double>VXG;
+	vector<double>VYG;
+	vector<double>VZG;
+	vector<double>VGMAG;
 	double SWTG[8] ;
 	double RHOG[8] ;
 	double RELKTG[8] ;
