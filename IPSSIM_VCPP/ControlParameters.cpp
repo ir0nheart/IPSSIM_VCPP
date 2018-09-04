@@ -655,7 +655,7 @@ DWDZG = vector<vector<double>>(N48, vector<double>(N48, 0));
 DFDXG = vector<vector<double>>(N48, vector<double>(N48, 0));
 DFDYG = vector<vector<double>>(N48, vector<double>(N48, 0));
 DFDZG = vector<vector<double>>(N48, vector<double>(N48, 0));
-init_guess = viennacl::scalar_vector<double>(NN,double(1.0));
+init_guess = viennacl::scalar_vector<double>(NN,double(0.01));
 
 //p_rhs.reserve(NN);
 //u_rhs.reserve(NN);
@@ -6779,7 +6779,7 @@ void ControlParameters::solveTimeStep()
 		{
 			printUMATToFile("UMAT.txt");
 			printUVECToFile("UVEC.txt");
-
+			cout << "Check File" << endl;
 		}
 		solveEquation(KPU,KSOLVR, UMATT, u_rhs,u_solution, ITRMXU,IERRU, ITRSU, ERRU);
 		for (int i = 1; i <= NN; i++){
@@ -6964,6 +6964,10 @@ void ControlParameters::GMRES(vector<double>& MAT, vector<double>& rhs, vector<d
 	//std::vector<map<unsigned int, double>> stl_A(NN, map<unsigned int, double>());
 	//vector<int> jJA;
 	//cout << "Max Element in jJA " << *max_element(jJA.begin(), jJA.end()) << endl;
+	if (stl_A.size()){
+		stl_A.clear();
+		stl_A.resize(NN);
+	}
 
 	for (int jk = 0; jk < IAVec.size(); jk++)
 	{

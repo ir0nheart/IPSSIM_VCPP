@@ -131,6 +131,12 @@ void main(){
 	//vol = 1213;
 	//cout << N.getVolTry() << endl;
 
+	std::vector<map<unsigned int, double>> stl_A(5, map<unsigned int, double>());
+	stl_A[0].emplace(0, 3);
+	stl_A[0].emplace(1, 4);
+	stl_A.clear();
+	stl_A.resize(5);
+	stl_A[0].emplace(0, 125);
 
 	// Create object for storing input and output file names.
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
