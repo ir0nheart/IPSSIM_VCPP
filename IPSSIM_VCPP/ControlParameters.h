@@ -45,12 +45,13 @@ class ControlParameters
 {
 public:
 	void printUMATToFile(string fname);
-	void GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution,int& ITRMXS,int& ITRS,double& ERR);
-	void BiCGSTAB(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR);
-	void ORTHOMIN(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR);
+	void GMRES(vector<double>& MAT, vector<double>& rhs, vector<double>& solution, int& ITRMXS, int& ITRS, double& ERR);
+	void BiCGSTAB(vector<double>& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR);
+	void ORTHOMIN(vector<double>& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR);
 	void BUDGET();
 	// try for parsing
-	void printToFile(string fname);
+	void printPVECToFile(string fname);
+	void printUVECToFile(string fname);
 	void set_bcs(bool val){ setBCS = val; }
 	bool get_bcs() const{ return setBCS; }
 	double * nodeX;
@@ -496,9 +497,11 @@ public:
 	void setOnceOBS(bool val);
 	void setTIME(double val);
 	double getTIME();
-	void solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,int &ITRMXS,double &IERR, int &ITRS, double & ERR);
-	void SOLVEB(int KMT, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution);
-	void SOLWRP(int KPU, int KSOLVR,MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,int& ITRMXS,int& ITRS,double &ERR);
+//	void solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,int &ITRMXS,double &IERR, int &ITRS, double & ERR);
+	void solveEquation(int KPU, int KSOLVR, vector<double>& MAT, vector<double>&rhs, vector<double>& solution, int &ITRMXS, double &IERR, int &ITRS, double & ERR);
+	//void SOLVEB(int KMT, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution);
+	void SOLVEB(int KMT, vector<double>& MAT, vector<double>&rhs, vector<double>& solution);
+	void SOLWRP(int KPU, int KSOLVR, vector<double>& MAT, vector<double>&rhs, vector<double>& solution, int& ITRMXS, int& ITRS, double &ERR);
 
 	void setML(int val);
 	int getML();
@@ -982,6 +985,8 @@ private:
 	vector<double>nodeUVEC;
 	vector<int>IAVec;
 	vector<int>JAVec;
+	vector<double>PMATT;
+	vector<double>UMATT;
 
 };
 #endif

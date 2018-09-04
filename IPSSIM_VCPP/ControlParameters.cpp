@@ -5267,8 +5267,9 @@ void ControlParameters::GLOCOL(int el, int ML, vector<double>& VOLE,vector<vecto
 					break;
 				}
 			}
-			double val = PMAT(M, 0) + BFLOWE[i][j];
-			PMAT(M, 0) = val;
+		//	double val = PMAT(M, 0) + BFLOWE[i][j];
+		//	PMAT(M, 0) = val;
+			PMATT[M] = PMATT[M] + BFLOWE[i][j];
 			
 		}
 	}
@@ -5295,8 +5296,9 @@ void ControlParameters::GLOCOL(int el, int ML, vector<double>& VOLE,vector<vecto
 							break;
 						}
 					}
-					double val = UMAT(M, 0) + DTRANE[i][j] + BTRANE[i][j];
-					UMAT(M, 0) = val;
+				//	double val = UMAT(M, 0) + DTRANE[i][j] + BTRANE[i][j];
+				//	UMAT(M, 0) = val;
+					UMATT[M] = UMATT[M] +DTRANE[i][j] + BTRANE[i][j];
 
 				}
 			}
@@ -5446,7 +5448,8 @@ void ControlParameters::NODAL()
 			CFLN = nodeContainer[i]->getPorosity() * nodeContainer[i]->getSWT()*DRWDU*nodeVOL[i-1];
 			DUDT = (1 - ISSFLO / 2)*(nodeContainer[i]->getUM1() - nodeContainer[i]->getUM2()) / DLTUM1;
 			CFLN = CFLN*DUDT - (nodeContainer[i]->getSW()*GCONST*TEMP*nodeContainer[i]->getPorosity()*nodeContainer[i]->getRHO()*(pow(nodeContainer[i]->getSWB(), 2) / term2)*(0.5*-1 * PRODF1*(nodeContainer[i]->getRHO()*nodeContainer[i]->getUITER() / SMWH)))*nodeContainer[i]->getVOL();
-			PMAT(IMID, JMID) = PMAT(IMID, JMID) + AFLN;
+		//	PMAT(IMID, JMID) = PMAT(IMID, JMID) + AFLN;
+			PMATT[IMID] = PMATT[IMID] + AFLN;
 			term4 = node_p_rhs[i-1] - CFLN + AFLN * nodeContainer[i]->getPM1() + nodeContainer[i]->getQIN();
 			p_rhs[i - 1] = term4;
 			//p_rhs.push_back(term4);
@@ -5471,7 +5474,8 @@ void ControlParameters::NODAL()
 			{
 				if (NOUMAT <= 0)
 				{
-					UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;;
+				//	UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;
+					UMATT[IMID] = UMATT[IMID] + ATRN - GTRN - GSLTRN - QUL;
 					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
 				}
 				else
@@ -5485,7 +5489,8 @@ void ControlParameters::NODAL()
 				QUR = -QUL * nodeContainer[i]->getUIN();
 				if (NOUMAT <= 0)
 				{
-					UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;;
+				//	UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;
+					UMATT[IMID] = UMATT[IMID] + ATRN - GTRN - GSLTRN - QUL;
 					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
 				}
 				else
@@ -5514,7 +5519,8 @@ void ControlParameters::NODAL()
 			{
 				if (NOUMAT <= 0)
 				{
-					UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;;
+					//UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;
+					UMATT[IMID] = UMATT[IMID] + ATRN - GTRN - GSLTRN - QUL;
 					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
 				}
 				else
@@ -5528,7 +5534,8 @@ void ControlParameters::NODAL()
 				QUR = -QUL * nodeContainer[i]->getUIN();
 				if (NOUMAT <= 0)
 				{
-					UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;;
+				//	UMAT(IMID, JMID) = UMAT(IMID, JMID) + ATRN - GTRN - GSLTRN - QUL;
+					UMATT[IMID] = UMATT[IMID] +ATRN - GTRN - GSLTRN - QUL;
 					nodeUVEC[i] = nodeUVEC[i] + ATRN*  nodeContainer[i]->getUM1() + ETRN + GSRTRN + QUR + nodeContainer[i]->getQUIN();
 				}
 				else
@@ -5589,7 +5596,8 @@ void ControlParameters::BC()
 				{
 					  GPINL  = - 1 * nodeContainer[ind]->getGNUP1();
 					  GPINR = nodeContainer[ind]->getGNUP1() * nodePBC[ind];
-					  PMAT(IMID, JMID) = PMAT(IMID, JMID) - GPINL;
+			//		  PMAT(IMID, JMID) = PMAT(IMID, JMID) - GPINL;
+					  PMATT[IMID] = PMATT[IMID] - GPINL;
 					  p_rhs[ind-1] = p_rhs[ind-1] + GPINR;
 					  GUR = 0.0;
 					  GUL = 0.0;
@@ -5603,7 +5611,8 @@ void ControlParameters::BC()
 						  }
 						  else
 						  {
-							  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							//  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							  UMATT[IMID] = UMATT[IMID] - GUL;
 							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
 						  }
 					  }
@@ -5615,7 +5624,8 @@ void ControlParameters::BC()
 						  }
 						  else
 						  {
-							  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							//  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							  UMATT[IMID] = UMATT[IMID] - GUL;
 							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
 						  }
 					  }
@@ -5624,7 +5634,8 @@ void ControlParameters::BC()
 				{
 					  GPINL = -1 * nodeContainer[ind]->getGNUP1();
 					  GPINR = nodeContainer[ind]->getGNUP1() * nodePBC[ind];
-					  PMAT(IMID, JMID) = PMAT(IMID, JMID) - GPINL;
+					//  PMAT(IMID, JMID) = PMAT(IMID, JMID) - GPINL;
+					  PMATT[IMID] = PMATT[IMID] - GPINL;
 					  nodePVEC[ind] = nodePVEC[ind] + GPINR;
 				}break;
 			case 2:
@@ -5641,7 +5652,8 @@ void ControlParameters::BC()
 						  }
 						  else
 						  {
-							  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							//  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							  UMATT[IMID] = UMATT[IMID] - GUL;
 							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
 						  }
 					  }
@@ -5653,7 +5665,8 @@ void ControlParameters::BC()
 						  }
 						  else
 						  {
-							  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							//  UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUL;
+							  UMATT[IMID] = UMATT[IMID] - GUL;
 							  nodeUVEC[ind] = nodeUVEC[ind] + GUR;
 						  }
 					  }
@@ -5693,7 +5706,8 @@ void ControlParameters::BC()
 					else
 					{
 						GUINL = -1 * nodeContainer[jnd]->getGNUU1();
-						UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUINL;
+					//	UMAT(IMID, JMID) = UMAT(IMID, JMID) - GUINL;
+						UMATT[IMID] = UMATT[IMID] - GUINL;
 						GUINR = nodeContainer[jnd]->getGNUU1() * nodeUBC[jnd];
 						nodeUVEC[jnd] = nodeUVEC[jnd] + GUINR;
 						
@@ -6364,8 +6378,10 @@ void ControlParameters::createSolverMatrix(){
 		NWI = max(NWIP, NWIU);
 		NWF = max(NWFP, NWFU);
 
-		PMAT = MatrixXd::Zero(NELT, 1);
-		UMAT = MatrixXd::Zero(NELT, 1);
+		//PMAT = MatrixXd::Zero(NELT, 1);
+		PMATT = vector<double>(NELT, 0);
+		//UMAT = MatrixXd::Zero(NELT, 1);
+		UMATT = vector<double>(NELT, 0);
 		stl_A = vector<map<unsigned int, double>>(NN, map<unsigned int, double>());
 		vcl_rhs = viennacl::scalar_vector<double>(NN, 0);
 		PPVEC = VectorXd::Zero(NNVEC);
@@ -6618,8 +6634,8 @@ double ControlParameters::DNRM2(int N, vector<double>& X, int INCX)
 	return NORM;
 }
 
-
-void ControlParameters::solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,int& ITRMXS,double& IERR, int& ITRS, double& ERR){
+//void ControlParameters::solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution,int& ITRMXS,double& IERR, int& ITRS, double& ERR){
+void ControlParameters::solveEquation(int KPU, int KSOLVR, vector<double>& MAT, vector<double>&rhs, vector<double>& solution,int& ITRMXS,double& IERR, int& ITRS, double& ERR){
 	char* KPUTEXT[2] = { "P", "U" };
 	double RHSNRM = DNRM2(NNVEC, rhs, 1);
 	if (RHSNRM == 0.0)
@@ -6652,12 +6668,14 @@ void ControlParameters::solveEquation(int KPU, int KSOLVR, MatrixXd& MAT, vector
 }
 
 
-void ControlParameters::SOLVEB(int KMT, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution)
+void ControlParameters::SOLVEB(int KMT, vector<double>& MAT, vector<double>&rhs, vector<double>& solution)
 {
 	
 }
 
-void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT,vector<double>&rhs , vector<double>& solution,int& ITRMXS,int& ITRS, double& ERR)
+
+//void ControlParameters::SOLWRP(int KPU, int KSOLVR, MatrixXd& MAT, vector<double>&rhs, vector<double>& solution, int& ITRMXS, int& ITRS, double& ERR)
+void ControlParameters::SOLWRP(int KPU, int KSOLVR, vector<double>& MAT,vector<double>&rhs , vector<double>& solution,int& ITRMXS,int& ITRS, double& ERR)
 {
 	//SOLWRP(KPU, KSOLVR, A, R, XITER, B, NNP,IWK, FWK, IA, JA, IERR, ITRS, ERR)
 	//SOLWRP(KPU, KSOLVR, C, R, XITER, B, NNP, IWK, FWK, IA, JA, IERR, ITRS, ERR)
@@ -6737,7 +6755,7 @@ void ControlParameters::solveTimeStep()
 		KPU = 0;
 		KSOLVR = KSOLVP;
 		//  SOLVER(KMT,KPU,KSOLVR,PMAT,PVEC,PITER,B,NN,IHALFB,NELT,NCBI,IWK, FWK, IA, JA, IERRP, ITRSP, ERRP)
-		solveEquation(KPU,KSOLVR,PMAT,p_rhs,p_solution,ITRMXP,IERRP,ITRSP,ERRP);
+		solveEquation(KPU,KSOLVR,PMATT,p_rhs,p_solution,ITRMXP,IERRP,ITRSP,ERRP);
 		// P solution is now in PVEC
 		for (int i = 1; i <= NN; i++)
 			nodeContainer[i]->setPVEC(p_solution[i - 1]);
@@ -6757,7 +6775,13 @@ void ControlParameters::solveTimeStep()
 		KMT = 0;
 		KPU = 1;
 		KSOLVR = KSOLVU;
-		solveEquation(KPU,KSOLVR, UMAT, u_rhs,u_solution, ITRMXU,IERRU, ITRSU, ERRU);
+		if (IT == 2)
+		{
+			printUMATToFile("UMAT.txt");
+			printUVECToFile("UVEC.txt");
+
+		}
+		solveEquation(KPU,KSOLVR, UMATT, u_rhs,u_solution, ITRMXU,IERRU, ITRSU, ERRU);
 		for (int i = 1; i <= NN; i++){
 			nodeContainer[i]->setUVEC(u_solution[i - 1]);
 			nodeUVEC[i-1] = u_solution[i - 1];
@@ -6898,7 +6922,7 @@ bool ControlParameters::getBCSTR(int index)
 	return this->BCSTR[index];
 }
 
-void ControlParameters::printToFile(string fname)
+void ControlParameters::printPVECToFile(string fname)
 {
 	string filename = InputFiles::Instance()->getInputDirectory() + "\\" + fname;
 	ofstream rhsStream;
@@ -6910,20 +6934,32 @@ void ControlParameters::printToFile(string fname)
 		rhsStream << p_rhs[i] << endl;
 	}
 }
+void ControlParameters::printUVECToFile(string fname)
+{
+	string filename = InputFiles::Instance()->getInputDirectory() + "\\" + fname;
+	ofstream rhsStream;
+
+	rhsStream.open(filename, std::ios_base::out);
+	rhsStream << u_rhs.size() << endl;
+	for (int i = 0; i < u_rhs.size(); i++)
+	{
+		rhsStream << u_rhs[i] << endl;
+	}
+}
 void ControlParameters::printUMATToFile(string fname)
 {
 	string filename = InputFiles::Instance()->getInputDirectory() + "\\" + fname;
 	ofstream rhsStream;
 
 	rhsStream.open(filename, std::ios_base::out);
-	rhsStream << UMAT.size() << endl;
-	for (int i = 0; i < UMAT.size(); i++)
+	rhsStream << UMATT.size() << endl;
+	for (int i = 0; i < UMATT.size(); i++)
 	{
-		rhsStream << UMAT(i,0) << endl;
+		rhsStream << UMATT[i] << endl;
 	}
 }
-
-void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution,int& ITRMXS, int& ITRS, double& ERR)
+//void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRMXS, int& ITRS, double& ERR)
+void ControlParameters::GMRES(vector<double>& MAT, vector<double>& rhs, vector<double>& solution, int& ITRMXS, int& ITRS, double& ERR)
 {
 	//std::vector<map<unsigned int, double>> stl_A(NN, map<unsigned int, double>());
 	//vector<int> jJA;
@@ -6931,7 +6967,7 @@ void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>
 
 	for (int jk = 0; jk < IAVec.size(); jk++)
 	{
-		stl_A[jJA[jk]].emplace(IAVec[jk], MAT(jk, 0));
+		stl_A[jJA[jk]].emplace(IAVec[jk], MAT[jk]);
 	}
 
 	copy(rhs.begin(), rhs.end(), vcl_rhs.begin());
@@ -6958,12 +6994,12 @@ void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>
 	
 }
 
-void ControlParameters::BiCGSTAB(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR)
+void ControlParameters::BiCGSTAB(vector<double>& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR)
 {
 	
 }
 
-void ControlParameters::ORTHOMIN(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR)
+void ControlParameters::ORTHOMIN(vector<double>& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR)
 {
 	
 }
@@ -7148,8 +7184,10 @@ void ControlParameters::BUDGET()
 
 void ControlParameters::ZeroVectorsAndMatrix()
 {
-	PMAT = MatrixXd::Zero(NELT, 1);
-	UMAT = MatrixXd::Zero(NELT, 1);
+	//PMAT = MatrixXd::Zero(NELT, 1);
+	PMATT = vector<double>(NELT, 0);
+	//UMAT = MatrixXd::Zero(NELT, 1);
+	UMATT = vector<double>(NELT, 0);
 	for (int i = 0; i < NN; i++)
 	{
 		nodeVOL[i] = 0;
