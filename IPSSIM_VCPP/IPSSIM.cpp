@@ -131,12 +131,10 @@ void main(){
 	//vol = 1213;
 	//cout << N.getVolTry() << endl;
 
-	std::vector<map<unsigned int, double>> stl_A(5, map<unsigned int, double>());
+	/*std::vector<map<unsigned int, double>> stl_A(5, map<unsigned int, double>());
 	stl_A[0].emplace(0, 3);
 	stl_A[0].emplace(1, 4);
-	stl_A.clear();
-	stl_A.resize(5);
-	stl_A[0].emplace(0, 125);
+	stl_A[0][0] = 124;*/
 
 	// Create object for storing input and output file names.
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
@@ -174,7 +172,25 @@ void main(){
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);
 	ControlParameters* controlParameters = ControlParameters::Instance();
 	Miscellaneous::spacer();
-	
+
+
+	/*double f[] = { 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1 };
+	int c[] = { 0, 1, 1, 2, 1, 2, 3, 2, 3, 4, 3, 4, 5 };
+	int r[] = { 0, 1, 2, 4, 7, 10, 13 };
+
+	double new_d[13];
+	int new_jmper[7]={0,0,0,0,0,0,0};
+	int new_indices[13];
+	controlParameters->re_orient_matrix(7,13,f, r, c, new_d, new_jmper, new_indices);
+*/
+	//vector<double> f = { 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1 };
+	//vector<int> c = { 0, 1, 1, 2, 1, 2, 3, 2, 3, 4, 3, 4, 5 };
+	//vector<int> r = { 0, 1, 2, 4, 7, 10, 13 };
+	//vector<double> new_val;
+	//vector<int> new_jmper;
+	//vector<int> new_indices;
+	//controlParameters->re_orient_matrix(7, 13, f, r, c, new_val, new_jmper, new_indices);
+
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_YELLOW);
 	cout << "Creating Parser Object" << endl;
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BRIGHT_GREEN);

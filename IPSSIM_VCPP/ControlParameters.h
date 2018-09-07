@@ -44,6 +44,8 @@ class DataSet;
 class ControlParameters
 {
 public:
+	void re_orient_matrix(int jmper_size, int vals_size,double vals[], int jmper[], int indices[], double new_vals[], int new_jmper[], int new_indices[]);
+	void re_orient_matrix(int jmper_size, int vals_size, vector<double>& vals, vector<int>&jmper, vector<int>& indices, vector<double>&new_vals, vector<int>& new_jumper, vector<int>&new_indices);
 	void printUMATToFile(string fname);
 	void GMRES(vector<double>& MAT, vector<double>& rhs, vector<double>& solution, int& ITRMXS, int& ITRS, double& ERR);
 	void BiCGSTAB(vector<double>& MAT, vector<double>& rhs, vector<double>& solution, int& ITRS, double& ERR);
@@ -987,6 +989,13 @@ private:
 	vector<int>JAVec;
 	vector<double>PMATT;
 	vector<double>UMATT;
+
+	vector<int>row_jumper;
+	vector<int>column_indices;
+	vector<double> r_MAT;
+	/*int * IA;
+	int * JA;
+	double * PMAT;*/
 
 };
 #endif

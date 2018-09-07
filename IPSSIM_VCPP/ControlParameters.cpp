@@ -16,7 +16,7 @@
 #include <Eigen/Sparse>
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/OrderingMethods>
-
+#define SIZE(a) (sizeof(a)/sizeof(*(a)))
 using namespace std;
 using namespace Eigen;
 typedef SparseMatrix<double> SpMat;
@@ -126,6 +126,58 @@ ControlParameters* ControlParameters::m_cInstance = NULL;
 
 unordered_map<string, DataSet *> ControlParameters::getDataSetMap(){
 	return this->dataSetMap;
+}
+void ControlParameters::re_orient_matrix(int jmper_size,int vals_size,double vals[], int jmper[], int indices[], double new_vals[], int new_jmper[], int new_indices[])
+{
+	int * rr = new int[vals_size];
+	int * nn = new int[jmper_size];
+	for (int k = 0, i = 0; i < jmper_size; i++)
+	for (int j = 0; j < jmper[i + 1] - jmper[i]; j++)
+		rr[k++] = i;
+
+	for (int i = 0; i < vals_size; i++)
+		new_jmper[indices[i] + 1]++;
+
+	for (int i = 1; i <= jmper_size-1; i++)
+		new_jmper[i] += new_jmper[i - 1];
+
+	memcpy(nn, new_jmper, sizeof(int)*jmper_size);
+
+	for (int i = 0; i < vals_size; i++) {
+		int x = nn[indices[i]]++;
+		new_vals[x] = vals[i];
+		new_indices[x] = rr[i];
+	}
+	delete[]rr;
+	delete[]nn;
+}
+void ControlParameters::re_orient_matrix(int jmper_size,int vals_size,vector<double>& vals,vector<int>&jmper,vector<int>& indices,vector<double>&new_vals,vector<int>& new_jumper,vector<int>&new_indices)
+{
+	vector<int> rr(vals_size, 0);
+	vector<int> nn(jmper_size, 0);
+	vector<int> nnew_jmper(jmper_size, 0);
+	vector<int> nnew_indices(vals_size, 0);
+	vector<double> nnew_vals(vals_size, 0);
+
+	for (int k = 0, i = 0; i < jmper_size-1; ++i)
+	for (int j = 0; j < jmper[i + 1] - jmper[i]; ++j)
+		rr[k++] = i;
+
+	for (int i = 0; i < vals_size; i++)
+		nnew_jmper[indices[i] + 1]++;
+
+	for (int i = 1; i <= jmper_size - 1; i++)
+		nnew_jmper[i] += nnew_jmper[i - 1];
+
+	copy(nnew_jmper.begin(), nnew_jmper.end(), nn.begin());
+	for (int i = 0; i < vals_size; i++) {
+		int x = nn[indices[i]]++;
+		nnew_vals[x] = vals[i];
+		nnew_indices[x] = rr[i];
+	}
+	new_vals = nnew_vals;
+	new_indices = nnew_indices;
+	new_jumper = nnew_jmper;
 }
 
 void ControlParameters::createDataSets(){
@@ -6530,19 +6582,19 @@ void ControlParameters::alpayPTR(){
 		ctr = ctr + nodeNeighbors[i + 1].size()+1;
 	}
 	JAVec.push_back(NELT);
-	jJA.reserve(NELT);
-	int dif = 0;
-	ctr = 0;
-	for (int j = 1; j < JAVec.size(); j++)
-	{
-		dif = JAVec[j] - JAVec[j - 1];
+	//jJA.reserve(NELT);
+	//int dif = 0;
+	//ctr = 0;
+	//for (int j = 1; j < JAVec.size(); j++)
+	//{
+	//	dif = JAVec[j] - JAVec[j - 1];
 
-		for (int i = 0; i < dif; i++)
-		{
-			jJA.push_back(ctr);
-		}
-		ctr++;
-	}
+	//	for (int i = 0; i < dif; i++)
+	//	{
+	//		jJA.push_back(ctr);
+	//	}
+	//	ctr++;
+	//}
 }
 
 void ControlParameters::TENSYM(double DL, double DT1, double DT2, double VNX, double UNX, double WNX,double VNY, double UNY, double WNY, double VNZ, double UNZ, double WNZ,
@@ -6961,32 +7013,31 @@ void ControlParameters::printUMATToFile(string fname)
 //void ControlParameters::GMRES(MatrixXd& MAT, vector<double>& rhs, vector<double>& solution, int& ITRMXS, int& ITRS, double& ERR)
 void ControlParameters::GMRES(vector<double>& MAT, vector<double>& rhs, vector<double>& solution, int& ITRMXS, int& ITRS, double& ERR)
 {
-	//std::vector<map<unsigned int, double>> stl_A(NN, map<unsigned int, double>());
-	//vector<int> jJA;
-	//cout << "Max Element in jJA " << *max_element(jJA.begin(), jJA.end()) << endl;
-	if (stl_A.size()){
-		stl_A.clear();
-		stl_A.resize(NN);
-	}
-
-	for (int jk = 0; jk < IAVec.size(); jk++)
-	{
-		stl_A[jJA[jk]].emplace(IAVec[jk], MAT[jk]);
-	}
+	//if (stl_A[0].size()){
+	//	for (int jk = 0; jk < IAVec.size(); jk++)
+	//	{
+	//		stl_A[IAVec[jk]][jJA[jk]] = MAT[jk];
+	//	}
+	//}
+	//else
+	//{
+	//	for (int jk = 0; jk < IAVec.size(); jk++)
+	//	{
+	//		stl_A[IAVec[jk]].emplace(jJA[jk], MAT[jk]);
+	//	}
+	//}
+	re_orient_matrix(NN + 1, NELT, MAT, JAVec, IAVec, r_MAT, row_jumper, column_indices);
+	
 
 	copy(rhs.begin(), rhs.end(), vcl_rhs.begin());
-	//viennacl::vector<double> vcl_rhs = viennacl::scalar_vector<double>(NN, 0);
-	//for (int i = 0; i < NN; i++)
-	//{
-	//	vcl_rhs[i] = p_rhs[i];
-	//}
 
 	viennacl::compressed_matrix<double> A;
-	viennacl::copy(stl_A, A);
+	
+	A.set(&row_jumper[0], &column_indices[0], &r_MAT[0],NN,NN,NELT);
+	//viennacl::copy(stl_A, A);
 	viennacl::linalg::ilu0_precond<viennacl::compressed_matrix<double>> ilu0(A, viennacl::linalg::ilu0_tag());
 	viennacl::linalg::gmres_tag my_gmres_tag(1e-13, ITRMXS, ITRMXS/10);
 	viennacl::linalg::gmres_solver<viennacl::vector<double> > my_gmres_solver(my_gmres_tag);
-	//init_guess = viennacl::scalar_vector<double>(NN, double(0.9));
 	init_guess[0] = 0;
 	monitor_user_data<viennacl::compressed_matrix<double>, viennacl::vector<double> > my_monitor_data(A, vcl_rhs, init_guess);
 	my_gmres_solver.set_monitor(my_custom_monitor<viennacl::vector<double>, double, viennacl::compressed_matrix<double> >, &my_monitor_data);
